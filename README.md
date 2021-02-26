@@ -8,6 +8,12 @@ A prototype plugin providing a simple line drawing api for bevy.
 This plugin uses a shader and sends individual points to the GPU, which then moves geometry to make a line.  This is quite fast with a significant number of lines, and there is no added cost to moving lines around.
 
 ## Usage
+Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
+```toml
+[dependencies]
+bevy_prototype_debug_lines = "0.1.1-alpha"
+```
+
 Add the plugin in your `App::build()` phase:
 ```rust
 use bevy::prelude::*;
