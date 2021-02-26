@@ -6,7 +6,7 @@ edition = "2018"
 license = "MIT"
 description = "A prototype plugin providing a simple line drawing API for bevy."
 repository = "https://github.com/Toqozz/bevy_debug_lines"
-keywords = ["debug", "lines", "graphics", "bevy", "3d", "2d", "drawing"]
+keywords = ["debug", "line", "graphics", "bevy", "drawing"]
 categories = ["game-engines", "rendering", "game-development"]
 
 [dependencies]
