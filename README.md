@@ -1,6 +1,8 @@
 # bevy_debug_lines
 A prototype plugin providing a simple line drawing api for bevy.
 
+![demo](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo.gif)
+
 ## About
 
 This plugin uses a shader and sends individual points to the GPU, which then moves geometry to make a line.  This is quite fast with a significant number of lines, and there is no added cost to moving lines around.
