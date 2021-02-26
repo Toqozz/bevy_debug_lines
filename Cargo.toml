@@ -13,8 +13,8 @@ categories = ["game-engines", "rendering", "game-development"]
 bevy = { version = "0.4", default-features = false, features = ["render"] }
 
 [features]
-examples = ["bevy/bevy_wgpu", "bevy/bevy_winit", "bevy/bevy_gltf", "bevy/x11"]
+example_deps = ["bevy/bevy_wgpu", "bevy/bevy_winit", "bevy/bevy_gltf", "bevy/x11"]
 
 [[example]]
 name = "demo"
-required-features = ["examples"]
+required-features = ["example_deps"]
