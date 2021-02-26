@@ -9,6 +9,10 @@ repository = "https://github.com/Toqozz/bevy_debug_lines"
 keywords = ["debug", "line", "graphics", "bevy", "drawing"]
 categories = ["game-engines", "rendering", "game-development"]
 
+exclude = [
+    "demo.webm",
+]
+
 [dependencies]
 bevy = { version = "0.4", default-features = false, features = ["render"] }
 
