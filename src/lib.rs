@@ -28,7 +28,6 @@ const VERTICES_PER_NODE: usize = 4;
 const TRIANGLES_PER_NODE: usize = 4;
 
 fn create_mesh() -> Mesh {
-
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
     let positions = [[0.0, 0.0, 0.0]; MAX_POINTS * VERTICES_PER_NODE];
@@ -101,8 +100,8 @@ pub fn setup(
 
     let mesh = create_mesh();
     let shader = materials.add(LineShader {
-        // TODO: need to use MAX_POINTS for this.
         points: vec![Vec4::zero(); MAX_POINTS],
+        colors: vec![Color::WHITE; MAX_POINTS],
     });
 
     commands
@@ -120,18 +119,25 @@ pub fn setup(
 #[derive(RenderResources, Default, TypeUuid)]
 #[uuid = "f093e7c5-634c-45f8-a2af-7fcd0245f259"]
 pub struct LineShader {
+    // I don't love having 2 buffers here.  It would be cleaner if we can do a custom line structure.
+    // We should also consider the memory imprint here.  We should maybe instead allow a predefined
+    // set of colors which would dramatically reduce that.
     #[render_resources(buffer)]
     pub points: Vec<Vec4>,
+    #[render_resources(buffer)]
+    pub colors: Vec<Color>,
 }
 
 pub struct Line {
     start: Vec3,
     end: Vec3,
+    color: Color,
+    thickness: f32,
 }
 
 impl Line {
-    pub fn new(start: Vec3, end: Vec3) -> Self {
-        Self { start, end }
+    pub fn new(start: Vec3, end: Vec3, thickness: f32, color: Color) -> Self {
+        Self { start, end, color, thickness }
     }
 }
 
@@ -150,27 +156,44 @@ impl Default for DebugLines {
 }
 
 impl DebugLines {
-    pub fn add_line(&mut self, id: u8, line: Line) {
-        let result = self.lines.insert(id, line);
-        if result.is_none() {
-            self.dirty = true;
-        }
+    /// Draw a line in world space, or update an existing line
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A unique identifier for the line
+    /// * `start` - The start of the line in world space
+    /// * `end` - The end of the line in world space
+    /// * `thickness` - Line thickness
+    pub fn line(&mut self, id: u8, start: Vec3, end: Vec3, thickness: f32) {
+        self.line_colored(id, start, end, thickness, Color::WHITE);
     }
 
-    pub fn add_or_update_line(&mut self, id: u8, start: Vec3, end: Vec3) {
+    /// Draw a line in world space with a specified color, or update an existing line
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A unique identifier for the line
+    /// * `start` - The start of the line in world space
+    /// * `end` - The end of the line in world space
+    /// * `thickness` - Line thickness
+    /// * `color` - Line color
+    pub fn line_colored(&mut self, id: u8, start: Vec3, end: Vec3, thickness: f32, color: Color) {
         let line = self.lines.get_mut(&id);
         if let Some(line) = line {
             line.start = start;
             line.end = end;
+            line.thickness = thickness;
+            line.color = color;
             self.dirty = true;
         } else {
-            self.lines.insert(id, Line::new(start, end));
+            self.lines.insert(id, Line::new(start, end, thickness, color));
         }
     }
 
     pub fn set_dirty(&mut self) {
         self.dirty = true;
     }
+
 }
 
 pub fn draw_lines(
@@ -190,8 +213,11 @@ pub fn draw_lines(
             let mut i = 0;
             for (_id, line) in &lines.lines {
                 // First point is start of line, second is end.
-                shader.points[i] = line.start.extend(0.0);
-                shader.points[i+1] = line.end.extend(0.0);
+                // point.w property is used for thickness.
+                shader.points[i] = line.start.extend(line.thickness);
+                shader.points[i+1] = line.end.extend(line.thickness);
+                shader.colors[i] = line.color;
+                shader.colors[i+1] = line.color;
 
                 i += 2;
             }
@@ -200,47 +226,3 @@ pub fn draw_lines(
 
     lines.dirty = false;
 }
-
-fn line_demo(
-    mut lines: ResMut<DebugLines>,
-    time: Res<Time>,
-) {
-    let x = 1.0 + (time.seconds_since_startup() as f32).sin();
-    lines.add_or_update_line(0, Vec3::new(-x, -0.5, 0.0), Vec3::new(x, 0.5, 0.0));
-}
-
-
-// Screen to world point code.
-/*
-pub fn draw_lines(
-    mut state: ResMut<State>,
-    ev_cursor: Res<Events<CursorMoved>>,
-    mut assets: ResMut<Assets<LineShader>>,
-    windows: Res<Windows>,
-    mut line_query: Query<(&mut DebugLines, &Handle<LineShader>)>,
-    camera_query: Query<(&Transform, &PerspectiveProjection, &Camera)>,
-) {
-    // Find a camera and transform.
-    let mut camera = None;
-    let mut perspective = None;
-    let mut transform = None;
-    for (t, p, c) in camera_query.iter() {
-        camera = Some(c);
-        transform = Some(t);
-        perspective = Some(p);
-        break;
-    }
-
-    let window = windows.get(WindowId::primary()).unwrap();
-    let screen_size = Vec2::from([window.width() as f32, window.height() as f32]);
-
-    for (mut _line, handle) in line_query.iter_mut() {
-        for ev in state.cursor.iter(&ev_cursor) {
-            let pos = ev.position;
-            let shader = assets.get_mut(handle).unwrap();
-            let real_pos = utility::screen_to_world_coord(&pos, 0.0, &screen_size, perspective.unwrap(), camera.unwrap(), transform.unwrap());
-            shader.points[1] = Vec4::new(real_pos.x(), real_pos.y(), real_pos.z(), 1.0);
-        }
-    }
-}
-*/

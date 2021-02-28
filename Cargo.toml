@@ -11,6 +11,7 @@ categories = ["game-engines", "rendering", "game-development"]
 
 exclude = [
     "demo.webm",
+    "demo.gif",
 ]
 
 [dependencies]
@@ -20,5 +21,9 @@ bevy = { version = "0.4", default-features = false, features = ["render"] }
 example_deps = ["bevy/bevy_wgpu", "bevy/bevy_winit", "bevy/bevy_gltf", "bevy/x11"]
 
 [[example]]
-name = "demo"
+name = "3d"
+required-features = ["example_deps"]
+
+[[example]]
+name = "2d"
 required-features = ["example_deps"]
