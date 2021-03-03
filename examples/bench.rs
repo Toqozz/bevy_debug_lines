@@ -14,7 +14,7 @@ fn main() {
         .add_plugin(PrintDiagnosticsPlugin::default())
         .add_startup_system(setup.system())
         .add_system(demo_circle.system())
-        //.add_system(demo2.system())
+        //.add_system(demo_block.system())
         .run();
 }
 

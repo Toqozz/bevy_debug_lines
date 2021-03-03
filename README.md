@@ -47,6 +47,14 @@ fn some_system(
 
 See [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/examples) for more complete usage examples.
 
+## Running Examples
+You can run the examples like so:
+```shell
+cargo run --example 3d --features="example_deps"
+```
+
+Where `3d` is one of the files in [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/examples)
+
 ## Notes and Missing Stuff
 This plugin is incomplete, so there are some things missing and general annoyances:
 - [ ] Each separate line needs a separate ID... to separate it from the others.  This can probably be handled automatically with a hash or something in the future.

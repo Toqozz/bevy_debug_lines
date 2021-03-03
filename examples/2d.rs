@@ -22,12 +22,21 @@ fn setup(
         });
 }
 
-fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
-    let seconds = time.seconds_since_startup() as f32;
-
-    let start = Vec3::splat(-1.0);
-    let end = Vec3::splat(1.0);
-    lines.line_colored(0, start, end, 10.0, Color::WHITE);
-    //lines.add_or_update_line(1, Vec3::new(f32::sin(seconds), -1.0, 0.0), Vec3::new(f32::sin(seconds + 3.14), 1.0, 0.0));
-    //lines.add_or_update_line(2, Vec3::new(-1.0, -1.0, f32::sin(seconds)), Vec3::new(1.0, 1.0, f32::sin(seconds + 3.14)));
+fn demo(mut lines: ResMut<DebugLines>) {
+    let start = Vec3::splat(-200.0);
+    let end = Vec3::splat(200.0);
+    lines.line(0, Vec3::new(-400.0, 200.0, 0.0), Vec3::new(400.0, 200.0, 0.0), 10.0);  // Units are generally "smaller" for 2d, so thickness should be higher.
+    lines.line_colored(
+        1,
+        Vec3::new(-400.0, 0.0, 0.0), Vec3::new(400.0, 0.0, 0.0),
+        10.0,
+        Color::GREEN
+    );
+    lines.line_gradient(
+        2,
+        Vec3::new(-400.0, -200.0, 0.0), Vec3::new(400.0, -200.0, 0.0),
+        10.0,
+        Color::WHITE,
+        Color::PINK
+    );
 }

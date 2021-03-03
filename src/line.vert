@@ -22,12 +22,14 @@ layout(set = 2, binding = 2) readonly buffer LineShader_colors {
 };
 
 void main() {
-    const int num_nodes = NumLines * 2;
+    int num_nodes = NumLines * 2;
 
+    // 0-1, then 2-3, then 4-5.
     uint idx = (gl_VertexIndex / 4) * 2;
-    uint next_idx = min(num_nodes-1, idx + 1);
+    uint next_idx = idx + 1;
+    // TODO: why does this bug?
+    // uint next_idx = min((NumLines*2)-1, idx + 1);
 
-    // This could probably be done better.
     // We don't need to do this anymore because we're structured better now, but keeping it around for now.
     /*
     if (idx % 2 != 0) {
