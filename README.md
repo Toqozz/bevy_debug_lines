@@ -1,7 +1,7 @@
 # bevy_debug_lines
 A prototype plugin providing a simple line drawing api for bevy.
 
-See [docs.rs]() for documentation.
+See [docs.rs](https://docs.rs/bevy_prototype_debug_lines/) for documentation.
 
 Expect breakage on master.
 
