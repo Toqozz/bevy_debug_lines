@@ -48,8 +48,8 @@ fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
         let start = Vec3::new(x, y, z);
         let end = -start;
 
-        let start_color = Color::rgba(x, y, 0.5, start.z.max(0.0));
-        let end_color = Color::rgba(x, y, 0.5, end.z.max(0.0));
+        let start_color = Color::rgba(x, y, 0.5, start.z.max(0.5));
+        let end_color = Color::rgba(x, y, 0.5, end.z.max(0.5));
 
         lines.line_gradient(i as u32, start, end, THICKNESS, start_color, end_color);
     }

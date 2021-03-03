@@ -11,6 +11,22 @@ use bevy::reflect::TypeUuid;
 
 use std::collections::HashMap;
 
+/// Bevy plugin, for initializing stuff.
+///
+/// # Usage
+///
+/// ```
+/// use bevy::prelude::*;
+/// use bevy_prototype_debug_lines::*;
+///
+/// fn main() {
+///     App::build()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugin(DebugLinesPlugin)
+///     ...
+///     .run();
+/// }
+/// ```
 pub struct DebugLinesPlugin;
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut AppBuilder) {
@@ -22,6 +38,7 @@ impl Plugin for DebugLinesPlugin {
     }
 }
 
+/// Maximum number of unique lines to draw at once.
 pub const MAX_LINES: usize = 128000;
 const MAX_POINTS: usize = MAX_LINES * 2;
 const VERTICES_PER_LINE: usize = 4;
@@ -54,7 +71,7 @@ fn create_mesh() -> Mesh {
     mesh
 }
 
-pub fn setup(
+fn setup(
     commands: &mut Commands,
     mut pipelines: ResMut<Assets<PipelineDescriptor>>,
     mut shaders: ResMut<Assets<Shader>>,
@@ -112,6 +129,7 @@ pub fn setup(
     info!("Loaded debug lines plugin.");
 }
 
+/// Shader data, passed to the GPU.
 #[derive(RenderResources, Default, TypeUuid)]
 #[uuid = "f093e7c5-634c-45f8-a2af-7fcd0245f259"]
 pub struct LineShader {
@@ -125,6 +143,7 @@ pub struct LineShader {
     pub colors: Vec<Color>,
 }
 
+/// A single line, usually initialized by helper methods on `DebugLines` instead of directly.
 pub struct Line {
     start: Vec3,
     end: Vec3,
@@ -138,6 +157,29 @@ impl Line {
     }
 }
 
+/// Bevy resource providing facilities to draw lines.
+/// 
+/// # Usage
+/// ```
+/// // Draws 3 horizontal lines.
+/// fn some_system(mut lines: ResMut<DebugLines>) {
+///     lines.line(0, Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0), 0.01);
+///     lines.line_colored(
+///         0,
+///         Vec3::new(-1.0, 0.0, 0.0),
+///         Vec3::new(1.0, 0.0, 0.0),
+///         0.01,
+///         Color::WHITE
+///     );
+///     lines.line_gradient(
+///         0,
+///         Vec3::new(-1.0, -1.0, 0.0),
+///         Vec3::new(1.0, -1.0, 0.0),
+///         0.01,
+///         Color::WHITE, Color::PINK
+///     );
+/// }
+/// ```
 pub struct DebugLines {
     pub lines: HashMap<u32, Line>,
     pub dirty: bool,
@@ -187,6 +229,16 @@ impl DebugLines {
         }
     }
 
+    /// Draw a line in world space with a specified gradient color, or update an existing line
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A unique identifier for the line
+    /// * `start` - The start of the line in world space
+    /// * `end` - The end of the line in world space
+    /// * `thickness` - Line thickness
+    /// * `start_color` - Line color
+    /// * `end_color` - Line color
     pub fn line_gradient(&mut self, id: u32, start: Vec3, end: Vec3, thickness: f32, start_color: Color, end_color: Color) {
         let line = self.lines.get_mut(&id);
         if let Some(line) = line {
@@ -206,9 +258,7 @@ impl DebugLines {
 
 }
 
-use std::convert::TryFrom;
-
-pub fn draw_lines(
+fn draw_lines(
     mut assets: ResMut<Assets<LineShader>>,
     mut lines: ResMut<DebugLines>,
     query: Query<&Handle<LineShader>>,
@@ -235,11 +285,15 @@ pub fn draw_lines(
                 i += 2;
             }
 
-            let size = u32::try_from(lines.lines.len()).unwrap_or_else(|_| {
-                warn!("DebugLines: Maximum number of lines exceeded: line count: {}, max lines: {}", lines.lines.len(), u16::MAX);
-                u16::MAX as u32
-            });
-            shader.num_lines = size;
+            let count = lines.lines.len();
+            let size = if count > MAX_LINES {
+                warn!("DebugLines: Maximum number of lines exceeded: line count: {}, max lines: {}", count, MAX_LINES);
+                MAX_LINES
+            } else {
+                count
+            };
+
+            shader.num_lines = size as u32; // Minimum size to send to shader is 4 bytes.
         }
     }
 
