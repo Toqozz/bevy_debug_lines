@@ -47,8 +47,8 @@ See [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/exampl
 
 ## Notes and Missing Stuff
 This plugin is in alpha, so there are things missing and general annoyances:
-- [ ] Each separate line needs a separate ID... to separate it from the others.  This can probably be handled automatically instead.
-- [ ] There is a defined maximum number of lines that is kinda low (`MAX_LINES = 128`).  I have some ideas to resolve this.
+- [ ] Each separate line needs a separate ID... to separate it from the others.  This can probably be handled automatically with a hash or something.
+- [x] There is a defined maximum number of lines that is kinda low (`MAX_LINES = 255`).  I have some ideas to resolve this. -> 128k limit on master now.
 - [x] Thickness is hardcoded (see `line.vert`), this is also easy to resolve -> fixed on master.
 - [x] Color is hardcoded (see `line.frag`) -> fixed on master.
 - [x] Missing documentation, but there's only really one function you should use; `add_or_update_line(id, start, end)`.

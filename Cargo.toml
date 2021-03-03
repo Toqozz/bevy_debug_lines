@@ -27,3 +27,7 @@ required-features = ["example_deps"]
 [[example]]
 name = "2d"
 required-features = ["example_deps"]
+
+[[example]]
+name = "bench"
+required-features = ["example_deps"]
