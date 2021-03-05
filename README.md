@@ -6,7 +6,7 @@ See [docs.rs](https://docs.rs/bevy_prototype_debug_lines/) for documentation.
 Expect breakage on master.
 
 ![demo](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo.gif)
-[![demo_2](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo_2.png)](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo_2.webm)
+[![demo_2](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo_2.png)](https://i.imgur.com/ryu3SEe.gifv)
 Click on the above demo to play it.
 
 ## About
