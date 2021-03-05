@@ -9,8 +9,6 @@ use bevy::render::render_graph::base;
 use bevy::render::renderer::RenderResources;
 use bevy::reflect::TypeUuid;
 
-use std::collections::HashMap;
-
 /// Bevy plugin, for initializing stuff.
 ///
 /// # Usage
@@ -133,7 +131,7 @@ fn setup(
 #[derive(RenderResources, Default, TypeUuid)]
 #[uuid = "f093e7c5-634c-45f8-a2af-7fcd0245f259"]
 pub struct LineShader {
-    pub num_lines: u32, // max number of lines: 65535
+    pub num_lines: u32, // max number of lines: see: MAX_LINES.
     // I don't love having 2 buffers here.  It would be cleaner if we can do a custom line structure.
     // We should also consider the memory imprint here.  We should maybe instead allow a predefined
     // set of colors which would dramatically reduce that.
@@ -163,16 +161,14 @@ impl Line {
 /// ```
 /// // Draws 3 horizontal lines.
 /// fn some_system(mut lines: ResMut<DebugLines>) {
-///     lines.line(0, Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0), 0.01);
+///     lines.line(Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0), 0.01);
 ///     lines.line_colored(
-///         0,
 ///         Vec3::new(-1.0, 0.0, 0.0),
 ///         Vec3::new(1.0, 0.0, 0.0),
 ///         0.01,
 ///         Color::WHITE
 ///     );
 ///     lines.line_gradient(
-///         0,
 ///         Vec3::new(-1.0, -1.0, 0.0),
 ///         Vec3::new(1.0, -1.0, 0.0),
 ///         0.01,
@@ -181,15 +177,15 @@ impl Line {
 /// }
 /// ```
 pub struct DebugLines {
-    pub lines: HashMap<u32, Line>,
-    pub dirty: bool,
+    pub lines: Vec<Line>,
+    //pub dirty: bool,
 }
 
 impl Default for DebugLines {
     fn default() -> Self {
         Self {
-            lines: HashMap::new(),
-            dirty: false,
+            lines: Vec::new(),
+            //dirty: false,
         }
     }
 }
@@ -199,63 +195,37 @@ impl DebugLines {
     ///
     /// # Arguments
     ///
-    /// * `id` - A unique identifier for the line
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
     /// * `thickness` - Line thickness
-    pub fn line(&mut self, id: u32, start: Vec3, end: Vec3, thickness: f32) {
-        self.line_colored(id, start, end, thickness, Color::WHITE);
+    pub fn line(&mut self, start: Vec3, end: Vec3, thickness: f32) {
+        self.line_colored(start, end, thickness, Color::WHITE);
     }
 
     /// Draw a line in world space with a specified color, or update an existing line
     ///
     /// # Arguments
     ///
-    /// * `id` - A unique identifier for the line
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
     /// * `thickness` - Line thickness
     /// * `color` - Line color
-    pub fn line_colored(&mut self, id: u32, start: Vec3, end: Vec3, thickness: f32, color: Color) {
-        let line = self.lines.get_mut(&id);
-        if let Some(line) = line {
-            line.start = start;
-            line.end = end;
-            line.thickness = thickness;
-            line.color = [color, color];
-            self.dirty = true;
-        } else {
-            self.lines.insert(id, Line::new(start, end, thickness, color, color));
-        }
+    pub fn line_colored(&mut self, start: Vec3, end: Vec3, thickness: f32, color: Color) {
+        self.lines.push(Line::new(start, end, thickness, color, color));
     }
 
     /// Draw a line in world space with a specified gradient color, or update an existing line
     ///
     /// # Arguments
     ///
-    /// * `id` - A unique identifier for the line
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
     /// * `thickness` - Line thickness
     /// * `start_color` - Line color
     /// * `end_color` - Line color
-    pub fn line_gradient(&mut self, id: u32, start: Vec3, end: Vec3, thickness: f32, start_color: Color, end_color: Color) {
-        let line = self.lines.get_mut(&id);
-        if let Some(line) = line {
-            line.start = start;
-            line.end = end;
-            line.thickness = thickness;
-            line.color = [start_color, end_color];
-            self.dirty = true;
-        } else {
-            self.lines.insert(id, Line::new(start, end, thickness, start_color, end_color));
-        }
+    pub fn line_gradient(&mut self, start: Vec3, end: Vec3, thickness: f32, start_color: Color, end_color: Color) {
+        self.lines.push(Line::new(start, end, thickness, start_color, end_color));
     }
-
-    pub fn set_dirty(&mut self) {
-        self.dirty = true;
-    }
-
 }
 
 fn draw_lines(
@@ -266,15 +236,18 @@ fn draw_lines(
     // One line changing makes us update all lines.
     // We can probably resolve this is it becomes a problem -- consider creating a number of "Line" entities to
     // split up the processing.
-    if !lines.dirty {
-        return;
-    }
+    // This has been removed due to needing to redraw every frame now, but the logic is sound and
+    // may be re-added at some point.
+    //if !lines.dirty {
+        //return;
+    //}
 
     for line_handle in query.iter() {
         // This could probably be faster if we can simplify to a memcpy instead.
         if let Some(shader) = assets.get_mut(line_handle) {
             let mut i = 0;
-            for (_id, line) in &lines.lines {
+            //for (_id, line) in &lines.lines {
+            for line in &lines.lines {
                 // First point is start of line, second is end.
                 // point.w property is used for thickness.
                 shader.points[i] = line.start.extend(line.thickness);
@@ -297,5 +270,5 @@ fn draw_lines(
         }
     }
 
-    lines.dirty = false;
+    lines.lines.clear();
 }

@@ -25,15 +25,13 @@ fn setup(
 fn demo(mut lines: ResMut<DebugLines>) {
     let start = Vec3::splat(-200.0);
     let end = Vec3::splat(200.0);
-    lines.line(0, Vec3::new(-400.0, 200.0, 0.0), Vec3::new(400.0, 200.0, 0.0), 10.0);  // Units are generally "smaller" for 2d, so thickness should be higher.
+    lines.line(Vec3::new(-400.0, 200.0, 0.0), Vec3::new(400.0, 200.0, 0.0), 10.0);  // Units are generally "smaller" for 2d, so thickness should be higher.
     lines.line_colored(
-        1,
         Vec3::new(-400.0, 0.0, 0.0), Vec3::new(400.0, 0.0, 0.0),
         10.0,
         Color::GREEN
     );
     lines.line_gradient(
-        2,
         Vec3::new(-400.0, -200.0, 0.0), Vec3::new(400.0, -200.0, 0.0),
         10.0,
         Color::WHITE,
