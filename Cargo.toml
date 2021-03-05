@@ -11,9 +11,9 @@ keywords = ["debug", "line", "graphics", "bevy", "drawing"]
 categories = ["game-engines", "rendering", "game-development"]
 
 exclude = [
-    "demo.webm",
     "demo.gif",
-    "demo2.gif",
+    "demo_2.png",
+    "demo_2.webm",
 ]
 
 [dependencies]
