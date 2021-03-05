@@ -16,7 +16,7 @@ This plugin uses a shader and sends individual points to the GPU, which then mov
 Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
 ```toml
 [dependencies]
-bevy_prototype_debug_lines = "0.1.3"
+bevy_prototype_debug_lines = "0.2.0"
 ```
 
 Add the plugin in your `App::build()` phase:
