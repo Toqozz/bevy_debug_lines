@@ -33,7 +33,7 @@ fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
     use std::f32::consts::PI;
 
     const RADIUS: f32 = 1.5;
-    const THICKNESS: f32 = 0.01;
+    const THICKNESS: f32 = 0.001;
 
     let seconds = 0.5 * time.seconds_since_startup() as f32;
 
@@ -45,11 +45,21 @@ fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
             seconds.sin(),
         );
 
+        /* Super trippy.
+        let (initial_x, initial_y) = (
+            RADIUS * f32::cos(angle * PI / 180.0 * i as f32),
+            RADIUS * f32::sin(angle * PI / 180.0 * i as f32),
+        );
+
+        let start_color = Color::rgba(initial_x, initial_y, 0.5, start.z.max(0.5));
+        let end_color = Color::rgba(-initial_x, -initial_y, 0.5, end.z.max(0.5));
+        */
+
         let start = Vec3::new(x, y, z);
         let end = -start;
 
-        let start_color = Color::rgba(x, y, 0.5, start.z.max(0.5));
-        let end_color = Color::rgba(x, y, 0.5, end.z.max(0.5));
+        let start_color = Color::rgba(start.x, start.y, 0.5, start.z.max(0.5));
+        let end_color = Color::rgba(end.x, end.y, 0.5, end.z.max(0.5));
 
         lines.line_gradient(start, end, THICKNESS, start_color, end_color);
     }

@@ -176,8 +176,16 @@ impl Line {
 ///     );
 /// }
 /// ```
+///
+/// # Properties
+///
+/// * `lines` - A `Vec` of `Line`s that is **cleared by the system every frame**.
+/// Normally you don't want to touch this, and it may go private in future releases.
+/// * `user_lines` - A Vec of `Line`s that is **not cleared by the system every frame**.
+/// Use this for inserting persistent lines and generally having control over how lines are collected.
 pub struct DebugLines {
     pub lines: Vec<Line>,
+    pub user_lines: Vec<Line>,
     //pub dirty: bool,
 }
 
@@ -185,6 +193,7 @@ impl Default for DebugLines {
     fn default() -> Self {
         Self {
             lines: Vec::new(),
+            user_lines: Vec::new(),
             //dirty: false,
         }
     }
@@ -246,8 +255,8 @@ fn draw_lines(
         // This could probably be faster if we can simplify to a memcpy instead.
         if let Some(shader) = assets.get_mut(line_handle) {
             let mut i = 0;
-            //for (_id, line) in &lines.lines {
-            for line in &lines.lines {
+            let all_lines = lines.lines.iter().chain(lines.user_lines.iter());
+            for line in all_lines {
                 // First point is start of line, second is end.
                 // point.w property is used for thickness.
                 shader.points[i] = line.start.extend(line.thickness);
@@ -258,7 +267,7 @@ fn draw_lines(
                 i += 2;
             }
 
-            let count = lines.lines.len();
+            let count = lines.lines.len() + lines.user_lines.len();
             let size = if count > MAX_LINES {
                 warn!("DebugLines: Maximum number of lines exceeded: line count: {}, max lines: {}", count, MAX_LINES);
                 MAX_LINES
