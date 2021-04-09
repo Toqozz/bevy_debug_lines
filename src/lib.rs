@@ -262,8 +262,8 @@ fn draw_lines(
                 // point.w property is used for thickness.
                 shader.points[i] = line.start.extend(line.thickness);
                 shader.points[i+1] = line.end.extend(line.thickness);
-                shader.colors[i] = line.color[0].into();
-                shader.colors[i+1] = line.color[1].into();
+                shader.colors[i] = line.color[0].as_rgba_f32().into();
+                shader.colors[i+1] = line.color[1].as_rgba_f32().into();
 
                 i += 2;
             }
