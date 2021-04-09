@@ -1,3 +1,7 @@
+//! # bevy_debug_lines
+//! 
+//! A plugin for drawing performant debug lines without a lot of hassle.
+
 #![allow(dead_code)]
 
 use bevy::prelude::*;
