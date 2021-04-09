@@ -1,6 +1,6 @@
 [package]
 name = "bevy_prototype_debug_lines"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Michael Palmos <toqoz@hotmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -17,7 +17,7 @@ exclude = [
 ]
 
 [dependencies]
-bevy = { version = "0.4", default-features = false, features = ["render"] }
+bevy = { version = "0.5", default-features = false, features = ["render"] }
 
 [features]
 example_deps = ["bevy/bevy_wgpu", "bevy/bevy_winit", "bevy/bevy_gltf", "bevy/x11"]

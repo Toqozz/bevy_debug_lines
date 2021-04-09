@@ -2,6 +2,7 @@
 A prototype plugin providing a simple line drawing api for bevy.
 
 See [docs.rs](https://docs.rs/bevy_prototype_debug_lines/) for documentation.
+See [crates.io](https://crates.io/crates/bevy_prototype_debug_lines) for crates.io.
 
 Expect breakage on master.
 
@@ -56,9 +57,6 @@ cargo run --example 3d --features="example_deps"
 
 Where `3d` is one of the files in [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/examples)
 
-## Notes and Missing Stuff
-This plugin is incomplete, so there are some things missing and general annoyances:
-- [ ] More gracefully handle exceeding max lines (`128000`).
-- [ ] More, I'm sure...
+
 
 Let me know if you have any requests, improvements, or suggestions on how to make this crate more ergonomic.

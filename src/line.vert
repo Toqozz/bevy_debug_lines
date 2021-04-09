@@ -4,7 +4,7 @@ layout(location = 0) in vec3 Vertex_Position;
 layout(location = 0) out vec3 v_Position;
 layout(location = 1) out vec4 v_Color;
 
-layout(set = 0, binding = 0) uniform Camera {
+layout(set = 0, binding = 0) uniform CameraViewProj {
     mat4 ViewProj;
 };
 layout(set = 1, binding = 0) uniform Transform {

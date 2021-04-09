@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::diagnostic::PrintDiagnosticsPlugin;
+use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::wgpu::diagnostic::WgpuResourceDiagnosticsPlugin;
 
@@ -11,7 +11,7 @@ fn main() {
         .add_plugin(DebugLinesPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(WgpuResourceDiagnosticsPlugin::default())
-        .add_plugin(PrintDiagnosticsPlugin::default())
+        .add_plugin(LogDiagnosticsPlugin::default())
         .add_startup_system(setup.system())
         .add_system(demo_circle.system())
         //.add_system(demo_block.system())
@@ -19,10 +19,9 @@ fn main() {
 }
 
 fn setup(
-    commands: &mut Commands,
+    mut commands: Commands,
 ) {
-    commands
-        .spawn(Camera3dBundle {
+    commands.spawn_bundle(PerspectiveCameraBundle {
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
             ..Default::default()
         });

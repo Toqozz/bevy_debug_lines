@@ -4,7 +4,7 @@ use bevy_prototype_debug_lines::{ DebugLinesPlugin, DebugLines, Line };
 
 fn main() {
     App::build()
-        .add_resource(Msaa { samples: 4 })
+        .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin)
         .add_startup_system(setup.system())
@@ -12,14 +12,13 @@ fn main() {
 }
 
 fn setup(
-    commands: &mut Commands,
+    mut commands: Commands,
     mut lines: ResMut<DebugLines>,
 ) {
-    commands
-        .spawn(Camera3dBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
-            ..Default::default()
-        });
+    commands.spawn_bundle(PerspectiveCameraBundle {
+        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
+        ..Default::default()
+    });
 
 
     // User lines are not cleared every frame, so we only need to push them once.  We are

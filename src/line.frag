@@ -5,7 +5,7 @@ layout(location = 1) in vec4 v_Color;
 
 layout(location = 0) out vec4 o_Target;
 
-layout (set = 0, binding = 0) uniform Camera {
+layout (set = 0, binding = 0) uniform CameraViewProj {
     mat4 ViewProj;
 };
 

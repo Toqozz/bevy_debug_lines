@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use bevy::{prelude::*, render::pipeline::{CullMode, RasterizationStateDescriptor}};
+use bevy::prelude::*;
 use bevy::render::mesh::{VertexAttributeValues, Indices};
-use bevy::render::pipeline::{PrimitiveTopology, PipelineDescriptor, RenderPipeline };
+use bevy::render::pipeline::{PrimitiveTopology, PipelineDescriptor, RenderPipeline, PrimitiveState, CullMode };
 use bevy::render::shader::{ShaderStages, ShaderStage};
 use bevy::render::render_graph::{AssetRenderResourcesNode, RenderGraph};
 use bevy::render::render_graph::base;
@@ -70,7 +70,7 @@ fn create_mesh() -> Mesh {
 }
 
 fn setup(
-    commands: &mut Commands,
+    mut commands: Commands,
     mut pipelines: ResMut<Assets<PipelineDescriptor>>,
     mut shaders: ResMut<Assets<Shader>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -86,12 +86,10 @@ fn setup(
         );
 
     // Disable backface culling (enable two sided rendering).
-    p.rasterization_state = Some(
-        RasterizationStateDescriptor {
-            cull_mode: CullMode::None,
-            ..Default::default()
-        }
-    );
+    p.primitive = PrimitiveState {
+        cull_mode: CullMode::None,
+        ..Default::default()
+    };
 
     // Create new shader pipeline.
     let pipeline_handle = pipelines.add(p);
@@ -111,18 +109,17 @@ fn setup(
     let mesh = create_mesh();
     let shader = materials.add(LineShader {
         num_lines: 0,
-        points: vec![Vec4::zero(); MAX_POINTS],
-        colors: vec![Color::WHITE; MAX_POINTS],
+        points: vec![Vec4::ZERO; MAX_POINTS],
+        colors: vec![Color::WHITE.into(); MAX_POINTS],
     });
 
-    commands
-        .spawn(MeshBundle {
+    commands.spawn_bundle(MeshBundle {
             mesh: meshes.add(mesh),
             render_pipelines: pipes,
-            transform: Transform::from_translation(Vec3::zero()),
+            transform: Transform::from_translation(Vec3::ZERO),
             ..Default::default()
         })
-        .with(shader);
+        .insert(shader);
 
     info!("Loaded debug lines plugin.");
 }
@@ -138,7 +135,7 @@ pub struct LineShader {
     #[render_resources(buffer)]
     pub points: Vec<Vec4>,
     #[render_resources(buffer)]
-    pub colors: Vec<Color>,
+    pub colors: Vec<Vec4>,
 }
 
 /// A single line, usually initialized by helper methods on `DebugLines` instead of directly.
@@ -261,8 +258,8 @@ fn draw_lines(
                 // point.w property is used for thickness.
                 shader.points[i] = line.start.extend(line.thickness);
                 shader.points[i+1] = line.end.extend(line.thickness);
-                shader.colors[i] = line.color[0];
-                shader.colors[i+1] = line.color[1];
+                shader.colors[i] = line.color[0].into();
+                shader.colors[i+1] = line.color[1].into();
 
                 i += 2;
             }
