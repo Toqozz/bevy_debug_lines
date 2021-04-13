@@ -3,6 +3,7 @@ layout(location = 0) in vec3 Vertex_Position;
 
 layout(location = 0) out vec3 v_Position;
 layout(location = 1) out vec4 v_Color;
+layout(location = 2) out int v_Rendered;
 
 layout(set = 0, binding = 0) uniform CameraViewProj {
     mat4 ViewProj;
@@ -22,11 +23,19 @@ layout(set = 2, binding = 2) readonly buffer LineShader_colors {
 };
 
 void main() {
+    v_Rendered = 1;
+
     int num_nodes = NumLines * 2;
 
     // 0-1, then 2-3, then 4-5.
     uint idx = (gl_VertexIndex / 4) * 2;
     uint next_idx = idx + 1;
+
+    if (idx >= num_nodes) {
+        v_Rendered = 0;
+        return;
+    }
+
     // TODO: why does this bug?
     // uint next_idx = min((NumLines*2)-1, idx + 1);
 
