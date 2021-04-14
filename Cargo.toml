@@ -1,6 +1,6 @@
 [package]
 name = "bevy_prototype_debug_lines"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Michael Palmos <toqoz@hotmail.com>"]
 edition = "2018"
 license = "MIT"
