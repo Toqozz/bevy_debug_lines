@@ -274,10 +274,9 @@ fn draw_lines(
         if lines.lines[i].duration < 0.0 {
             lines.lines.swap(i, len - 1);
             len -= 1;
-            i -= 1;
+        } else {
+            i += 1;
         }
-
-        i += 1;
     }
 
     lines.lines.truncate(len);
