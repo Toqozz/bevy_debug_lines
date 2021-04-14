@@ -270,8 +270,8 @@ fn draw_lines(
     let mut i = 0;
     let mut len = lines.lines.len();
     while i != len {
-        lines.lines[i].time -= time.delta_seconds();
-        if lines.lines[i].time < 0.0 {
+        lines.lines[i].duration -= time.delta_seconds();
+        if lines.lines[i].duration < 0.0 {
             lines.lines.swap(i, len - 1);
             len -= 1;
             i -= 1;
