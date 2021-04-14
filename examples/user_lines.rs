@@ -23,9 +23,9 @@ fn setup(
 
     // User lines are not cleared every frame, so we only need to push them once.  We are
     // also responsible for removing them, however.
-    let line1 = Line::new(Vec3::new(-2.0, -1.0, 0.0), Vec3::new(2.0, -1.0, 0.0), 0.01, Color::PINK, Color::GOLD);
-    let line2 = Line::new(Vec3::new(-2.0, 0.0, 0.0), Vec3::new(2.0, 0.0, 0.0), 0.01, Color::YELLOW, Color::GREEN);
-    let line3 = Line::new(Vec3::new(-2.0, 1.0, 0.0), Vec3::new(2.0, 1.0, 0.0), 0.01, Color::RED, Color::TEAL);
+    let line1 = Line::new(Vec3::new(-2.0, -1.0, 0.0), Vec3::new(2.0, -1.0, 0.0), 0.0, Color::PINK, Color::GOLD);
+    let line2 = Line::new(Vec3::new(-2.0, 0.0, 0.0), Vec3::new(2.0, 0.0, 0.0), 0.0, Color::YELLOW, Color::GREEN);
+    let line3 = Line::new(Vec3::new(-2.0, 1.0, 0.0), Vec3::new(2.0, 1.0, 0.0), 0.0, Color::RED, Color::TEAL);
     lines.user_lines.push(line1);
     lines.user_lines.push(line2);
     lines.user_lines.push(line3);

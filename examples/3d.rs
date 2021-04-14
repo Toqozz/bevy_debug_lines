@@ -24,7 +24,7 @@ fn setup(
 fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
     let seconds = time.seconds_since_startup() as f32;
 
-    lines.line(Vec3::new(-1.0, f32::sin(seconds), 0.0), Vec3::new(1.0, f32::sin(seconds + 3.14), 0.0),  0.01);
-    lines.line_colored(Vec3::new(f32::sin(seconds), -1.0, 0.0), Vec3::new(f32::sin(seconds + 3.14), 1.0, 0.0),  0.01, Color::WHITE);
-    lines.line_gradient(Vec3::new(-1.0, -1.0, f32::sin(seconds)), Vec3::new(1.0, 1.0, f32::sin(seconds + 3.14)), 0.01, Color::GOLD, Color::PINK);
+    lines.line(Vec3::new(-1.0, f32::sin(seconds), 0.0), Vec3::new(1.0, f32::sin(seconds + 3.14), 0.0),  0.0);
+    lines.line_colored(Vec3::new(f32::sin(seconds), -1.0, 0.0), Vec3::new(f32::sin(seconds + 3.14), 1.0, 0.0),  0.0, Color::WHITE);
+    lines.line_gradient(Vec3::new(-1.0, -1.0, f32::sin(seconds)), Vec3::new(1.0, 1.0, f32::sin(seconds + 3.14)), 0.0, Color::GOLD, Color::PINK);
 }

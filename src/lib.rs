@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use bevy::prelude::*;
-use bevy::render::mesh::{VertexAttributeValues, Indices};
+use bevy::render::mesh::VertexAttributeValues;
 use bevy::render::pipeline::{PrimitiveTopology, PipelineDescriptor, RenderPipeline, PrimitiveState, CullMode };
 use bevy::render::shader::{ShaderStages, ShaderStage};
 use bevy::render::render_graph::{AssetRenderResourcesNode, RenderGraph};
@@ -42,33 +42,13 @@ impl Plugin for DebugLinesPlugin {
 
 /// Maximum number of unique lines to draw at once.
 pub const MAX_LINES: usize = 128000;
-const MAX_POINTS: usize = MAX_LINES * 2;
-const VERTICES_PER_LINE: usize = 4;
-const TRIANGLES_PER_LINE: usize = 2;
+/// Maximum number of points.
+pub const MAX_POINTS: usize = MAX_LINES * 2;
 
 fn create_mesh() -> Mesh {
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
-    let positions = vec![[0.0, 0.0, 0.0]; MAX_LINES * VERTICES_PER_LINE];
-    let mut indices = vec![0; MAX_LINES * TRIANGLES_PER_LINE * 3];
-    // For each line, we set up indices to make a rectangle out of 2 triangles, connecting the points.
-    for i in 0..MAX_LINES {
-        // Index of first triangle for this line.
-        let idx: usize = i * TRIANGLES_PER_LINE * 3;
-        // Index of first vertex of this line.
-        let v_idx: u32 = (i * VERTICES_PER_LINE) as u32;
-
-        // Bevy uses a COUNTER-CLOCKWISE WINDING ORDER -- counter-clickwise tri indices are facing the camera.
-        indices[idx + 0] = v_idx;           // v1 top
-        indices[idx + 1] = v_idx + 1;       // v1 bottom
-        indices[idx + 2] = v_idx + 3;       // v2 bottom
-        indices[idx + 3] = v_idx;           // v1 top
-        indices[idx + 4] = v_idx + 3;       // v2 bottom
-        indices[idx + 5] = v_idx + 2;       // v2 top
-    }
-
+    let mut mesh = Mesh::new(PrimitiveTopology::LineList);
+    let positions = vec![[0.0, 0.0, 0.0]; MAX_LINES * 2];
     mesh.set_attribute(Mesh::ATTRIBUTE_POSITION,VertexAttributeValues::Float3(positions.into()));
-    mesh.set_indices(Some(Indices::U32(indices.into())));
 
     mesh
 }
@@ -147,12 +127,12 @@ pub struct Line {
     start: Vec3,
     end: Vec3,
     color: [Color; 2],
-    thickness: f32,
+    duration: f32,
 }
 
 impl Line {
-    pub fn new(start: Vec3, end: Vec3, thickness: f32, start_color: Color, end_color: Color) -> Self {
-        Self { start, end, color: [start_color, end_color], thickness }
+    pub fn new(start: Vec3, end: Vec3, duration: f32, start_color: Color, end_color: Color) -> Self {
+        Self { start, end, color: [start_color, end_color], duration }
     }
 }
 
@@ -160,19 +140,19 @@ impl Line {
 /// 
 /// # Usage
 /// ```
-/// // Draws 3 horizontal lines.
+/// // Draws 3 horizontal lines, which disappear after 1 frame.
 /// fn some_system(mut lines: ResMut<DebugLines>) {
-///     lines.line(Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0), 0.01);
+///     lines.line(Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0), 0.0);
 ///     lines.line_colored(
 ///         Vec3::new(-1.0, 0.0, 0.0),
 ///         Vec3::new(1.0, 0.0, 0.0),
-///         0.01,
+///         0.0,
 ///         Color::WHITE
 ///     );
 ///     lines.line_gradient(
 ///         Vec3::new(-1.0, -1.0, 0.0),
 ///         Vec3::new(1.0, -1.0, 0.0),
-///         0.01,
+///         0.0,
 ///         Color::WHITE, Color::PINK
 ///     );
 /// }
@@ -207,9 +187,9 @@ impl DebugLines {
     ///
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
-    /// * `thickness` - Line thickness
-    pub fn line(&mut self, start: Vec3, end: Vec3, thickness: f32) {
-        self.line_colored(start, end, thickness, Color::WHITE);
+    /// * `duration` - Duration (in seconds) that the line should show for -- a value of zero will show the line for 1 frame.
+    pub fn line(&mut self, start: Vec3, end: Vec3, duration: f32) {
+        self.line_colored(start, end, duration, Color::WHITE);
     }
 
     /// Draw a line in world space with a specified color, or update an existing line
@@ -218,10 +198,10 @@ impl DebugLines {
     ///
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
-    /// * `thickness` - Line thickness
+    /// * `duration` - Duration (in seconds) that the line should show for -- a value of zero will show the line for 1 frame.
     /// * `color` - Line color
-    pub fn line_colored(&mut self, start: Vec3, end: Vec3, thickness: f32, color: Color) {
-        self.lines.push(Line::new(start, end, thickness, color, color));
+    pub fn line_colored(&mut self, start: Vec3, end: Vec3, duration: f32, color: Color) {
+        self.line_gradient(start, end, duration, color, color);
     }
 
     /// Draw a line in world space with a specified gradient color, or update an existing line
@@ -230,17 +210,26 @@ impl DebugLines {
     ///
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
-    /// * `thickness` - Line thickness
+    /// * `duration` - Duration (in seconds) that the line should show for -- a value of zero will show the line for 1 frame.
     /// * `start_color` - Line color
     /// * `end_color` - Line color
-    pub fn line_gradient(&mut self, start: Vec3, end: Vec3, thickness: f32, start_color: Color, end_color: Color) {
-        self.lines.push(Line::new(start, end, thickness, start_color, end_color));
+    pub fn line_gradient(&mut self, start: Vec3, end: Vec3, duration: f32, start_color: Color, end_color: Color) {
+        let line = Line::new(start, end, duration, start_color, end_color);
+
+        // If we are at maximum capacity, we push the first line out.
+        if self.lines.len() == MAX_LINES {
+            //bevy::log::warn!("Hit max lines, so replaced most recent line.");
+            self.lines.pop();
+        }
+
+        self.lines.push(line);
     }
 }
 
 fn draw_lines(
     mut assets: ResMut<Assets<LineShader>>,
     mut lines: ResMut<DebugLines>,
+    time: Res<Time>,
     query: Query<&Handle<LineShader>>,
 ) {
     // One line changing makes us update all lines.
@@ -258,10 +247,8 @@ fn draw_lines(
             let mut i = 0;
             let all_lines = lines.lines.iter().chain(lines.user_lines.iter());
             for line in all_lines {
-                // First point is start of line, second is end.
-                // point.w property is used for thickness.
-                shader.points[i] = line.start.extend(line.thickness);
-                shader.points[i+1] = line.end.extend(line.thickness);
+                shader.points[i] = line.start.extend(0.0);
+                shader.points[i+1] = line.end.extend(0.0);
                 shader.colors[i] = line.color[0].as_rgba_f32().into();
                 shader.colors[i+1] = line.color[1].as_rgba_f32().into();
 
@@ -270,7 +257,7 @@ fn draw_lines(
 
             let count = lines.lines.len() + lines.user_lines.len();
             let size = if count > MAX_LINES {
-                warn!("DebugLines: Maximum number of lines exceeded: line count: {}, max lines: {}", count, MAX_LINES);
+                bevy::log::warn!("DebugLines: Maximum number of lines exceeded: line count: {}, max lines: {}", count, MAX_LINES);
                 MAX_LINES
             } else {
                 count
@@ -280,5 +267,18 @@ fn draw_lines(
         }
     }
 
-    lines.lines.clear();
+    let mut i = 0;
+    let mut len = lines.lines.len();
+    while i != len {
+        lines.lines[i].time -= time.delta_seconds();
+        if lines.lines[i].time < 0.0 {
+            lines.lines.swap(i, len - 1);
+            len -= 1;
+            i -= 1;
+        }
+
+        i += 1;
+    }
+
+    lines.lines.truncate(len);
 }

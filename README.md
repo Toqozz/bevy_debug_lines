@@ -17,7 +17,7 @@ This plugin uses a shader and sends individual points to the GPU, which then mov
 Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
 ```toml
 [dependencies]
-bevy_prototype_debug_lines = "0.2.2"
+bevy_prototype_debug_lines = "0.3.0"
 ```
 
 Add the plugin in your `App::build()` phase:
@@ -42,8 +42,8 @@ fn some_system(
 ) {
     let start = Vec3::splat(-1.0);
     let end = Vec3::splat(1.0);
-    let thickness = 0.01;
-    lines.line(start, end, thickness);
+    let duration = 0.0;     // Duration of 0 will show the line for 1 frame.
+    lines.line(start, end, duration);
 }
 ```
 
@@ -57,6 +57,12 @@ cargo run --example 3d --features="example_deps"
 
 Where `3d` is one of the files in [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/examples)
 
+## Changes in `0.3.0`
+In `0.3.0`, the `thickness` parameter has been removed.  I don't believe it provides enough value for the performance, time, or issues.
+However, if you feel differently, let me know in [this](https://github.com/Toqozz/bevy_debug_lines/issues/2) issue.
 
+This is technically a non-breaking change (i.e. your code will still compile) because `duration` was added which takes the same spot, but beware that your code still needs to be updated (probably just set old `thickness` values to `0`, if you don't care about duration stuff.).
 
-Let me know if you have any requests, improvements, or suggestions on how to make this crate more ergonomic.
+---
+
+Please do not hesitate to let me know if you have any requests, improvements, or suggestions on how to make this crate more ergonomic or otherwise.

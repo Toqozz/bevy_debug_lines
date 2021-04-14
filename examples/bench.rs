@@ -11,7 +11,7 @@ fn main() {
         .add_plugin(DebugLinesPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(WgpuResourceDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin::default())
+        .add_plugin(LogDiagnosticsPlugin { wait_duration: bevy::utils::Duration::new(5, 0), ..Default::default() })
         .add_startup_system(setup.system())
         .add_system(demo_circle.system())
         //.add_system(demo_block.system())
@@ -64,7 +64,7 @@ fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
     }
 }
 
-fn demo_block(time: Res<Time>, mut lines: ResMut<DebugLines>) {
+fn _demo_block(mut lines: ResMut<DebugLines>) {
     use bevy_prototype_debug_lines::MAX_LINES;
 
     const THICKNESS: f32 = 0.01;
