@@ -274,7 +274,7 @@ fn draw_lines(
         if lines.lines[i].duration < 0.0 {
             lines.lines.swap(i, len - 1);
             len -= 1;
-            i -= 1;
+            i = i.saturating_sub(1);
         }
 
         i += 1;
