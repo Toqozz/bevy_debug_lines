@@ -1,6 +1,7 @@
 # bevy_debug_lines
 [![crates.io](https://img.shields.io/crates/v/bevy_prototype_debug_lines)](https://crates.io/crates/bevy_prototype_debug_lines)
 [![docs.rs](https://docs.rs/bevy_prototype_debug_lines/badge.svg)](https://docs.rs/bevy_prototype_debug_lines)
+
 A plugin providing a simple line drawing api for bevy.
 
 ![demo](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo.gif)
@@ -48,7 +49,7 @@ fn some_system(
 
 Some options, such as depth testing, can be changed by inserting the `DebugLines` resource yourself:
 
-```
+```rust
 use bevy::prelude::*;
 use bevy_prototype_debug_lines::*;
 
