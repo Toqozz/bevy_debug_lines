@@ -5,12 +5,13 @@
 #![allow(dead_code)]
 
 use bevy::prelude::*;
-use bevy::render::mesh::VertexAttributeValues;
-use bevy::render::pipeline::{PrimitiveTopology, PipelineDescriptor, RenderPipeline, PrimitiveState, CullMode };
-use bevy::render::shader::{ShaderStages, ShaderStage};
-use bevy::render::render_graph::{AssetRenderResourcesNode, RenderGraph};
-use bevy::render::render_graph::base;
-use bevy::render::renderer::RenderResources;
+use bevy::render::{
+    mesh::VertexAttributeValues,
+    pipeline::{ PrimitiveTopology, PipelineDescriptor, RenderPipeline, PrimitiveState, CullMode  },
+    shader::{ asset_shader_defs_system, ShaderStages, ShaderStage, ShaderDefs },
+    render_graph::{ AssetRenderResourcesNode, RenderGraph, base },
+    renderer::RenderResources,
+};
 use bevy::reflect::TypeUuid;
 
 /// Bevy plugin, for initializing stuff.
@@ -29,6 +30,22 @@ use bevy::reflect::TypeUuid;
 ///     .run();
 /// }
 /// ```
+///
+/// Some options can be changed by inserting your own `DebugLines` resource:
+///
+/// ```
+/// use bevy::prelude::*;
+/// use bevy_prototype_debug_lines::*;
+///
+/// fn main() {
+///     App::build()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugin(DebugLinesPlugin)
+///     .insert_resource(DebugLines { depth_test: true, ..Default::default() })
+///     ...
+///     .run();
+/// }
+/// ```
 pub struct DebugLinesPlugin;
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut AppBuilder) {
@@ -36,7 +53,8 @@ impl Plugin for DebugLinesPlugin {
             .add_asset::<LineShader>()
             .init_resource::<DebugLines>()
             .add_startup_system(setup.system())
-            .add_system(draw_lines.system());
+            .add_system(draw_lines.system())
+            .add_system_to_stage(CoreStage::PostUpdate, asset_shader_defs_system::<LineShader>.system());
     }
 }
 
@@ -48,12 +66,13 @@ pub const MAX_POINTS: usize = MAX_LINES * 2;
 fn create_mesh() -> Mesh {
     let mut mesh = Mesh::new(PrimitiveTopology::LineList);
     let positions = vec![[0.0, 0.0, 0.0]; MAX_LINES * 2];
-    mesh.set_attribute(Mesh::ATTRIBUTE_POSITION,VertexAttributeValues::Float3(positions.into()));
+    mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, VertexAttributeValues::Float3(positions.into()));
 
     mesh
 }
 
 fn setup(
+    lines: Res<DebugLines>,
     mut commands: Commands,
     mut pipelines: ResMut<Assets<PipelineDescriptor>>,
     mut shaders: ResMut<Assets<Shader>>,
@@ -87,7 +106,6 @@ fn setup(
         .add_node_edge("line_shader", base::node::MAIN_PASS)
         .unwrap();
 
-
     let pipes = RenderPipelines::from_pipelines(vec![RenderPipeline::new(pipeline_handle)]);
 
     let mesh = create_mesh();
@@ -95,6 +113,7 @@ fn setup(
         num_lines: 0,
         points: vec![Vec4::ZERO; MAX_POINTS],
         colors: vec![Color::WHITE.into(); MAX_POINTS],
+        depth_test: lines.depth_test,
     });
 
     commands.spawn_bundle(MeshBundle {
@@ -109,7 +128,7 @@ fn setup(
 }
 
 /// Shader data, passed to the GPU.
-#[derive(RenderResources, Default, TypeUuid)]
+#[derive(RenderResources, Default, ShaderDefs, TypeUuid)]
 #[uuid = "f093e7c5-634c-45f8-a2af-7fcd0245f259"]
 pub struct LineShader {
     pub num_lines: u32, // max number of lines: see: MAX_LINES.
@@ -120,6 +139,10 @@ pub struct LineShader {
     pub points: Vec<Vec4>,
     #[render_resources(buffer)]
     pub colors: Vec<Vec4>,
+
+    #[render_resources(ignore)]
+    #[shader_def]
+    pub depth_test: bool,
 }
 
 /// A single line, usually initialized by helper methods on `DebugLines` instead of directly.
@@ -164,9 +187,13 @@ impl Line {
 /// Normally you don't want to touch this, and it may go private in future releases.
 /// * `user_lines` - A Vec of `Line`s that is **not cleared by the system every frame**.
 /// Use this for inserting persistent lines and generally having control over how lines are collected.
+/// * `depth_test` - Enable/disable depth testing, i.e. whether lines should be drawn behind other
+/// geometry.
 pub struct DebugLines {
     pub lines: Vec<Line>,
     pub user_lines: Vec<Line>,
+
+    pub depth_test: bool,
     //pub dirty: bool,
 }
 
@@ -175,6 +202,8 @@ impl Default for DebugLines {
         Self {
             lines: Vec::new(),
             user_lines: Vec::new(),
+
+            depth_test: false,
             //dirty: false,
         }
     }
@@ -235,12 +264,11 @@ fn draw_lines(
     // One line changing makes us update all lines.
     // We can probably resolve this is it becomes a problem -- consider creating a number of "Line" entities to
     // split up the processing.
-    // This has been removed due to needing to redraw every frame now, but the logic is sound and
+    // This has been removed due to needing to redraw every frame now, but the logic is reasonable and
     // may be re-added at some point.
     //if !lines.dirty {
         //return;
     //}
-
     for line_handle in query.iter() {
         // This could probably be faster if we can simplify to a memcpy instead.
         if let Some(shader) = assets.get_mut(line_handle) {

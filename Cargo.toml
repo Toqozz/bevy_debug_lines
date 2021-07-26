@@ -1,6 +1,6 @@
 [package]
 name = "bevy_prototype_debug_lines"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Michael Palmos <toqoz@hotmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -36,4 +36,8 @@ required-features = ["example_deps"]
 
 [[example]]
 name = "user_lines"
+required-features = ["example_deps"]
+
+[[example]]
+name = "depth_test"
 required-features = ["example_deps"]
