@@ -53,8 +53,8 @@ impl Plugin for DebugLinesPlugin {
             .add_asset::<LineShader>()
             .init_resource::<DebugLines>()
             .add_startup_system(setup.system())
-            .add_system(draw_lines.system())
-            .add_system_to_stage(CoreStage::PostUpdate, asset_shader_defs_system::<LineShader>.system());
+            .add_system_to_stage(CoreStage::Last, draw_lines.system().label("draw_lines"))
+            .add_system_to_stage(CoreStage::Last, asset_shader_defs_system::<LineShader>.system().before("draw_lines"));
     }
 }
 
