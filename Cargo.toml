@@ -41,3 +41,7 @@ required-features = ["example_deps"]
 [[example]]
 name = "depth_test"
 required-features = ["example_deps"]
+
+[[example]]
+name = "movement"
+required-features = ["example_deps"]
