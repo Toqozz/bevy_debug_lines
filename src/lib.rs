@@ -5,6 +5,7 @@
 #![allow(dead_code)]
 
 use bevy::prelude::*;
+use bevy::render::RenderStage;
 use bevy::render::{
     mesh::VertexAttributeValues,
     pipeline::{ PrimitiveTopology, PipelineDescriptor, RenderPipeline, PrimitiveState, CullMode  },
