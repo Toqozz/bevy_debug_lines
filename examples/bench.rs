@@ -1,30 +1,31 @@
-use bevy::prelude::*;
-use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+use bevy::diagnostic::LogDiagnosticsPlugin;
+use bevy::prelude::*;
 use bevy::wgpu::diagnostic::WgpuResourceDiagnosticsPlugin;
 
-use bevy_prototype_debug_lines::{ DebugLinesPlugin, DebugLines };
+use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
-    App::build()
+    App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(WgpuResourceDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin { wait_duration: bevy::utils::Duration::new(5, 0), ..Default::default() })
+        .add_plugin(LogDiagnosticsPlugin {
+            wait_duration: bevy::utils::Duration::new(5, 0),
+            ..Default::default()
+        })
         .add_startup_system(setup.system())
         .add_system(demo_circle.system())
         //.add_system(demo_block.system())
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-) {
+fn setup(mut commands: Commands) {
     commands.spawn_bundle(PerspectiveCameraBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
-            ..Default::default()
-        });
+        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
+        ..Default::default()
+    });
 }
 
 fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {

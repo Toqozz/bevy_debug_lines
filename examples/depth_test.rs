@@ -1,13 +1,16 @@
 use bevy::prelude::*;
 
-use bevy_prototype_debug_lines::{ DebugLinesPlugin, DebugLines };
+use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
-    App::build()
+    App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin)
-        .insert_resource(DebugLines { depth_test: true, ..Default::default() })
+        .insert_resource(DebugLines {
+            depth_test: true,
+            ..Default::default()
+        })
         .add_startup_system(setup.system())
         .add_system(demo.system())
         .run();
@@ -25,12 +28,21 @@ fn setup(
 
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(StandardMaterial { base_color: Color::RED, ..Default::default() }),
+        material: materials.add(StandardMaterial {
+            base_color: Color::RED,
+            ..Default::default()
+        }),
         transform: Transform::from_xyz(0.0, 0.0, -0.5),
         ..Default::default()
     });
 }
 
 fn demo(mut lines: ResMut<DebugLines>) {
-    lines.line_gradient(Vec3::new(-1.0, -1.0, -1.0), Vec3::new(1.0, 1.0, 1.0),  0.0, Color::BLUE, Color::RED);
+    lines.line_gradient(
+        Vec3::new(-1.0, -1.0, -1.0),
+        Vec3::new(1.0, 1.0, 1.0),
+        0.0,
+        Color::BLUE,
+        Color::RED,
+    );
 }
