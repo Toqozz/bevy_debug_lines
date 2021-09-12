@@ -83,6 +83,7 @@ This is technically a non-breaking change (i.e. your code will still compile) be
 
 | bevy | bevy_prototype_debug_lines |
 | --- | --- |
+| main | `bevy-main` branch (not guaranteed maintained) |
 | 0.5 | 0.3 |
 | 0.4 | 0.2.1 |
 
