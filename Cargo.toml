@@ -10,17 +10,23 @@ name = "bevy_prototype_debug_lines"
 repository = "https://github.com/Toqozz/bevy_debug_lines"
 version = "0.4.0"
 
-exclude = [
-  "demo.gif",
-  "demo_2.png",
-  "demo_2.webm",
-]
+exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 
 [dependencies]
-bevy = {git = "https://github.com/bevyengine/bevy", default-features = false, features = ["render"]}
+bevy = "0.5"
+
+[patch.crates-io]
+bevy = { git = "https://github.com/bevyengine/bevy", default-features = false, features = [
+    "render",
+] }
 
 [features]
-example_deps = ["bevy/bevy_wgpu", "bevy/bevy_winit", "bevy/bevy_gltf", "bevy/x11"]
+example_deps = [
+    "bevy/bevy_wgpu",
+    "bevy/bevy_winit",
+    "bevy/bevy_gltf",
+    "bevy/x11",
+]
 
 [[example]]
 name = "3d"
