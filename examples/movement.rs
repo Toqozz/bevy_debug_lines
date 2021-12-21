@@ -1,14 +1,14 @@
 use bevy::{input::mouse::MouseMotion, prelude::*};
 
-use bevy_prototype_debug_lines::{ DebugLinesPlugin, DebugLines };
+use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
-    App::build()
+    App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin)
         .add_startup_system(setup.system())
-        .add_system_to_stage(CoreStage::Last, move_with_mouse.system().before("draw_lines"))
+        .add_system_to_stage(CoreStage::Last, move_with_mouse.before("draw_lines"))
         .run();
 }
 
@@ -22,19 +22,24 @@ fn setup(
         ..Default::default()
     });
 
-    commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 0.1 })),
-        material: materials.add(StandardMaterial { base_color: Color::RED, ..Default::default() }),
-        transform: Transform::from_xyz(0.0, 0.0, -0.5),
-        ..Default::default()
-    })
-    .insert(MoveWithMouse);
+    commands
+        .spawn_bundle(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Cube { size: 0.1 })),
+            material: materials.add(StandardMaterial {
+                base_color: Color::RED,
+                ..Default::default()
+            }),
+            transform: Transform::from_xyz(0.0, 0.0, -0.5),
+            ..Default::default()
+        })
+        .insert(MoveWithMouse);
 }
 
+#[derive(Component)]
 struct MoveWithMouse;
 fn move_with_mouse(
     mut mouse_motion: EventReader<MouseMotion>,
-    mut lines: ResMut<DebugLines>,
+    mut lines: DebugLines,
     mut query: Query<&mut Transform, With<MoveWithMouse>>,
 ) {
     let mut delta = Vec2::ZERO;
@@ -46,6 +51,11 @@ fn move_with_mouse(
         let movement = Vec3::new(delta.x, -delta.y, 0.0) * 0.01;
         transform.translation += movement;
         let forward = transform.local_z();
-        lines.line_colored(transform.translation, transform.translation + forward, 0.0, Color::GREEN);
+        lines.line_colored(
+            transform.translation,
+            transform.translation + forward,
+            0.0,
+            Color::GREEN,
+        );
     }
 }

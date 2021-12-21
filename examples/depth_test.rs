@@ -7,10 +7,6 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin)
-        .insert_resource(DebugLines {
-            depth_test: true,
-            ..Default::default()
-        })
         .add_startup_system(setup.system())
         .add_system(demo.system())
         .run();
@@ -37,7 +33,7 @@ fn setup(
     });
 }
 
-fn demo(mut lines: ResMut<DebugLines>) {
+fn demo(mut lines: DebugLines) {
     lines.line_gradient(
         Vec3::new(-1.0, -1.0, -1.0),
         Vec3::new(1.0, 1.0, 1.0),

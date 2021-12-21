@@ -19,7 +19,7 @@ fn setup(mut commands: Commands) {
     });
 }
 
-fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
+fn demo(time: Res<Time>, mut lines: DebugLines) {
     let seconds = time.seconds_since_startup() as f32;
 
     lines.line(
