@@ -13,9 +13,9 @@ fn main() {
             wait_duration: bevy::utils::Duration::new(5, 0),
             ..Default::default()
         })
-        .add_startup_system(setup.system())
-        .add_system(demo_circle.system())
-        //.add_system(demo_block.system())
+        .add_startup_system(setup)
+        .add_system(demo_circle)
+        //.add_system(demo_block)
         .run();
 }
 
@@ -31,7 +31,7 @@ fn demo_circle(time: Res<Time>, mut lines: DebugLines) {
     use std::f32::consts::PI;
 
     const RADIUS: f32 = 1.5;
-    const THICKNESS: f32 = 0.001;
+    const THICKNESS: f32 = 0.0;
 
     let seconds = 0.5 * time.seconds_since_startup() as f32;
 
@@ -66,7 +66,7 @@ fn demo_circle(time: Res<Time>, mut lines: DebugLines) {
 fn _demo_block(mut lines: DebugLines) {
     use bevy_prototype_debug_lines::MAX_LINES;
 
-    const THICKNESS: f32 = 0.01;
+    const THICKNESS: f32 = 10.0;
     const X: f32 = 2.0;
     const Y: f32 = 1.0;
 

@@ -7,16 +7,24 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin)
-        .add_startup_system(setup.system())
-        .add_system(demo.system())
+        .add_startup_system(setup)
+        .add_system(demo)
         .run();
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, mut lines: DebugLines) {
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
         ..Default::default()
     });
+    // Demonstrate "retained mod" lines
+    lines.line_gradient(
+        Vec3::new(1.0, -1.0, -1.0),
+        Vec3::new(-1.0, 1.0, 1.0),
+        100.0,
+        Color::CYAN,
+        Color::ORANGE_RED,
+    );
 }
 
 fn demo(time: Res<Time>, mut lines: DebugLines) {
