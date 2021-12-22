@@ -23,7 +23,7 @@ fn setup(mut commands: Commands, mut lines: DebugLines) {
         Vec3::new(-1.0, 1.0, 1.0),
         100.0,
         Color::CYAN,
-        Color::ORANGE_RED,
+        Color::MIDNIGHT_BLUE,
     );
 }
 

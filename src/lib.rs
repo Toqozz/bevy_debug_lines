@@ -73,8 +73,9 @@ pub const MAX_LINES: usize = MAX_POINTS / 2;
 pub const MAX_POINTS: usize = MAX_POINTS_PER_MESH * DEBUG_LINES_MESH_COUNT;
 
 fn spawn_debug_lines_mesh(meshes: &mut Assets<Mesh>, retain: DebugLinesMesh) -> impl Bundle {
+    let is_immediate = matches!(retain, DebugLinesMesh::Immediate(_));
     (
-        meshes.add(debug_lines_mesh()),
+        meshes.add(debug_lines_mesh(is_immediate)),
         Transform::default(),
         GlobalTransform::default(),
         Visibility::default(),
@@ -111,7 +112,7 @@ fn update_debug_lines_mesh(
 }
 
 /// Initialize [`DebugLinesMesh`]'s [`Mesh`].
-fn debug_lines_mesh() -> Mesh {
+fn debug_lines_mesh(is_immediate: bool) -> Mesh {
     let mut mesh = Mesh::new(PrimitiveTopology::LineList);
     mesh.set_attribute(
         Mesh::ATTRIBUTE_POSITION,
@@ -121,14 +122,16 @@ fn debug_lines_mesh() -> Mesh {
         Mesh::ATTRIBUTE_COLOR,
         VertexAttributeValues::Float32x4(Vec::with_capacity(256)),
     );
-    mesh.set_indices(Some(Indices::U16(Vec::with_capacity(256))));
+    if !is_immediate {
+        mesh.set_indices(Some(Indices::U16(Vec::with_capacity(256))));
+    }
     mesh
 }
 
 /// Move the DebugLinesMesh marker Component to the render context.
-fn extract_debug_lines(mut commands: Commands, query: Query<(Entity, &DebugLinesMesh)>) {
-    for (entity, mesh_info) in query.iter() {
-        commands.get_or_spawn(entity).insert(mesh_info.clone());
+fn extract_debug_lines(mut commands: Commands, query: Query<Entity, With<DebugLinesMesh>>) {
+    for entity in query.iter() {
+        commands.get_or_spawn(entity).insert(RenderDebugLinesMesh);
     }
 }
 
@@ -136,7 +139,7 @@ fn extract_debug_lines(mut commands: Commands, query: Query<(Entity, &DebugLines
 /// debuglines.wgsl shader.
 ///
 /// Stores the index of the mesh for the logic of `ImmLinesStorage` and `RetLinesStorage`
-#[derive(Component, Debug, Clone)]
+#[derive(Component)]
 enum DebugLinesMesh {
     /// Meshes for duration=0.0 lines
     Immediate(usize),
@@ -148,6 +151,9 @@ impl Default for DebugLinesMesh {
         DebugLinesMesh::Immediate(0)
     }
 }
+
+#[derive(Component)]
+struct RenderDebugLinesMesh;
 
 // NOTE: consider this: we could just hold a Handle<Mesh> to the DebugLinesMesh
 // and modify it in-place, so that there is no need to update the mesh every
@@ -194,23 +200,6 @@ impl ImmLinesStorage {
         }
     }
 
-    fn fill_indices(&self, buffer: &mut Vec<u16>, mesh: usize) {
-        buffer.clear();
-        let start = mesh << 16;
-        let end = (mesh + 1) << 16;
-        let buffer_size = self.positions.len();
-        let indices = if start < buffer_size && buffer_size >= end {
-            // Because MAX_POINTS_PER_MESH == 2^16
-            0xFFFF_u16
-        } else if start < buffer_size && buffer_size < end {
-            (buffer_size - start) as u16
-        } else {
-            0
-        };
-        // Because MAX_POINTS_PER_MESH == 2^16, this needs to be inclusive
-        buffer.extend(0..=indices);
-    }
-
     fn mark_expired(&mut self) {
         self.positions.clear();
         self.colors.clear();
@@ -232,9 +221,6 @@ impl ImmLinesStorage {
 
     fn fill_attributes(&self, mesh: &mut Mesh, mesh_index: usize) {
         use VertexAttributeValues::{Float32x3, Float32x4};
-        if let Some(Indices::U16(indices)) = mesh.indices_mut() {
-            self.fill_indices(indices, mesh_index);
-        }
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             self.fill_vertexes(vbuffer, mesh_index);
         }
@@ -458,7 +444,7 @@ impl SpecializedPipeline for DebugLinePipeline {
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone_weak();
         descriptor.primitive.topology = PrimitiveTopology::LineList;
         descriptor.primitive.cull_mode = None;
-        // TODO: set this to None to remove depth check
+        // TODO: set this to a large value to remove depth check
         descriptor.depth_stencil.as_mut().unwrap().bias.slope_scale = 1.0;
         descriptor
     }
@@ -470,7 +456,7 @@ fn queue_debug_lines(
     mut pipeline_cache: ResMut<RenderPipelineCache>,
     mut specialized_pipelines: ResMut<SpecializedPipelines<DebugLinePipeline>>,
     msaa: Res<Msaa>,
-    material_meshes: Query<(Entity, &MeshUniform), With<DebugLinesMesh>>,
+    material_meshes: Query<(Entity, &MeshUniform), With<RenderDebugLinesMesh>>,
     mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
 ) {
     let draw_custom = opaque_3d_draw_functions
