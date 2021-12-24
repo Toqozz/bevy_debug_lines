@@ -16,7 +16,7 @@ exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 bevy = { version = "0.5", default-features = false, features = [ "render" ] }
 
 [patch.crates-io]
-bevy = { git = "https://github.com/bevyengine/bevy", rev = "aeba9faf0451c4340cc3041d31519dd909598c0b" }
+bevy = { git = "https://github.com/bevyengine/bevy", rev = "76ec709edee77c28a4a027ff1ab8d768be523633" }
 
 [features]
 example_deps = [

@@ -52,7 +52,7 @@ impl Plugin for DebugLinesPlugin {
         app.init_resource::<RetLinesStorage>();
         app.add_startup_system(setup_system)
             .add_system_to_stage(CoreStage::Last, update_debug_lines_mesh.label("draw_lines"));
-        app.sub_app(RenderApp)
+        app.sub_app_mut(RenderApp)
             .add_render_command::<Opaque3d, DrawDebugLines>()
             .init_resource::<DebugLinePipeline>()
             .init_resource::<SpecializedPipelines<DebugLinePipeline>>()
