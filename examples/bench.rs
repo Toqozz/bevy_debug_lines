@@ -7,7 +7,7 @@ use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin)
+        .add_plugin(DebugLinesPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin {
             wait_duration: bevy::utils::Duration::new(5, 0),

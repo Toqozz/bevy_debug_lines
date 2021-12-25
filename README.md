@@ -17,19 +17,19 @@ This plugin uses a shader and sends individual points to the GPU, which then mov
 Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
 ```toml
 [dependencies]
-bevy_prototype_debug_lines = "0.3.2"
+bevy_prototype_debug_lines = "0.4.0"
 ```
 
-Add the plugin in your `App::build()` phase:
+Add the plugin in your `App::new()` phase:
 ```rust
 use bevy::prelude::*;
 use bevy_prototype_debug_lines::*;
 
 fn main() {
-    App::build()
+    App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin)
-        ...
+        .add_plugin(DebugLinesPlugin::default())
+//      ...
         .run();
 }
 ```
@@ -37,8 +37,8 @@ fn main() {
 Draw a line in whatever system you have using the `DebugLines` resource:
 ```rust
 fn some_system(
-    ...
-    mut lines: ResMut<DebugLines>
+//  ...
+    mut lines: DebugLines,
 ) {
     let start = Vec3::splat(-1.0);
     let end = Vec3::splat(1.0);
@@ -54,11 +54,10 @@ use bevy::prelude::*;
 use bevy_prototype_debug_lines::*;
 
 fn main() {
-    App::build()
+    App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(DebugLinesPlugin)
-    .insert_resource(DebugLines { depth_test: true, ..Default::default() })
-    ...
+    .add_plugin(DebugLinesPlugin::draw_on_top(true))
+//  ...
     .run();
 }
 ```
@@ -79,10 +78,24 @@ However, if you feel differently, let me know in [this](https://github.com/Toqoz
 
 This is technically a non-breaking change (i.e. your code will still compile) because `duration` was added which takes the same spot, but beware that your code still needs to be updated (probably just set old `thickness` values to `0`, if you don't care about duration stuff.).
 
+## Changes in `0.4.0`
+
+* Complete rewrite
+* Support bevy 0.6
+* Use a wgsl shader, which should improve web compatibility
+* `DebugLines` is now a `SystemParam`, you should replace `mut lines: ResMut<DebugLines>`
+  in your code by a simple `mut lines: DebugLines`
+* The depth check is not supported through the `DebugLines.depth_check` field
+  anymore. You should set it when initializing the plugin with
+  `.add_plugin(DebugLinesPlugin::draw_on_top(false)`
+* `DebugLinesPlugin` has now a constructor, you should replace `.add_plugin(DebugLinesPlugin)`
+  in your code by `.add_plugin(DebugLinesPlugin::default())`.
+
 ## Bevy Version Support
 
 | bevy | bevy_prototype_debug_lines |
 | --- | --- |
+| 0.6 | 0.4 |
 | 0.5 | 0.3 |
 | 0.4 | 0.2.1 |
 

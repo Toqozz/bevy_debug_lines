@@ -39,8 +39,15 @@ const DEBUG_LINES_SHADER_HANDLE: HandleUntyped =
 ///     .add_plugin(DebugLinesPlugin)
 ///     .run();
 /// ```
-#[derive(Debug, Default)]
-pub struct DebugLinesPlugin;
+#[derive(Debug, Default, Clone)]
+pub struct DebugLinesPlugin {
+    always_on_top: bool,
+}
+impl DebugLinesPlugin {
+    pub fn draw_on_top(always_on_top: bool) -> Self {
+        DebugLinesPlugin { always_on_top }
+    }
+}
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
@@ -53,6 +60,7 @@ impl Plugin for DebugLinesPlugin {
         app.add_startup_system(setup_system)
             .add_system_to_stage(CoreStage::Last, update_debug_lines_mesh.label("draw_lines"));
         app.sub_app_mut(RenderApp)
+            .insert_resource(self.clone())
             .add_render_command::<Opaque3d, DrawDebugLines>()
             .init_resource::<DebugLinePipeline>()
             .init_resource::<SpecializedPipelines<DebugLinePipeline>>()
@@ -165,10 +173,6 @@ struct RenderDebugLinesMesh;
 // TODO: Use a u32 for colors, this may improve performance if decoding and
 // encoding the color is not more expensive than moving 4 values in memory 3
 // times
-//
-// TODO: add a `segment` method that let you define a line with several
-// points, this would enable sparing a lot of space using indexing, we could
-// store those as a `segments` field maybe?
 /// The [`DebugLines`] storage for immediate mod lines.
 ///
 /// This is `pub` because of the `SystemParam` macro on [`DebugLines`]. The end
@@ -404,12 +408,15 @@ impl<'w, 's> DebugLines<'w, 's> {
 struct DebugLinePipeline {
     mesh_pipeline: MeshPipeline,
     shader: Handle<Shader>,
+    always_on_top: bool,
 }
 impl FromWorld for DebugLinePipeline {
     fn from_world(render_world: &mut World) -> Self {
+        let dbl_plugin = render_world.get_resource::<DebugLinesPlugin>().unwrap();
         DebugLinePipeline {
             mesh_pipeline: render_world.get_resource::<MeshPipeline>().unwrap().clone(),
             shader: DEBUG_LINES_SHADER_HANDLE.typed(),
+            always_on_top: dbl_plugin.always_on_top,
         }
     }
 }
@@ -444,8 +451,8 @@ impl SpecializedPipeline for DebugLinePipeline {
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone_weak();
         descriptor.primitive.topology = PrimitiveTopology::LineList;
         descriptor.primitive.cull_mode = None;
-        // TODO: set this to a large value to remove depth check
-        descriptor.depth_stencil.as_mut().unwrap().bias.slope_scale = 1.0;
+        let depth_rate = if self.always_on_top { 10000.0 } else { 1.0 };
+        descriptor.depth_stencil.as_mut().unwrap().bias.slope_scale = depth_rate;
         descriptor
     }
 }

@@ -6,7 +6,7 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin)
+        .add_plugin(DebugLinesPlugin::default())
         .add_startup_system(setup.system())
         .add_system_to_stage(CoreStage::Last, move_with_mouse.before("draw_lines"))
         .run();
