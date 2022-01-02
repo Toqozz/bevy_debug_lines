@@ -34,7 +34,7 @@ fn main() {
 }
 ```
 
-Draw a line in whatever system you have using the `DebugLines` resource:
+Draw a line in whatever system you have using the `DebugLines` system parameter:
 ```rust
 fn some_system(
 //  ...
@@ -47,7 +47,8 @@ fn some_system(
 }
 ```
 
-Some options, such as depth testing, can be changed by inserting the `DebugLines` resource yourself:
+Some options, such as depth testing, can be changed by using the
+`DebugLinesPlugin::always_in_front()` method:
 
 ```rust
 use bevy::prelude::*;
@@ -56,7 +57,7 @@ use bevy_prototype_debug_lines::*;
 fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(DebugLinesPlugin::draw_on_top(true))
+    .add_plugin(DebugLinesPlugin::always_in_front())
 //  ...
     .run();
 }
@@ -86,9 +87,10 @@ This is technically a non-breaking change (i.e. your code will still compile) be
 * `DebugLines` is now a `SystemParam`, you should replace `mut lines: ResMut<DebugLines>`
   in your code by a simple `mut lines: DebugLines`
 * The depth check is not supported through the `DebugLines.depth_check` field
-  anymore. You should set it when initializing the plugin with
-  `.add_plugin(DebugLinesPlugin::draw_on_top(false)`
-* `DebugLinesPlugin` has now a constructor, you should replace `.add_plugin(DebugLinesPlugin)`
+  anymore. You need to set it when initializing the plugin. By default depth
+  test is disabled but can be enabled with:
+  `.add_plugin(DebugLinesPlugin::always_in_front())`
+* `DebugLinesPlugin` now has a constructor, you should replace `.add_plugin(DebugLinesPlugin)`
   in your code by `.add_plugin(DebugLinesPlugin::default())`.
 
 ## Bevy Version Support

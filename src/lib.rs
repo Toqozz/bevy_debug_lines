@@ -36,16 +36,36 @@ const DEBUG_LINES_SHADER_HANDLE: HandleUntyped =
 ///
 /// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugin(DebugLinesPlugin)
+///     .add_plugin(DebugLinesPlugin::default())
+///     .run();
+/// ```
+///
+/// Alternatively, you can initialize the plugin without depth testing, so that
+/// debug lines are always visible, even when behind other objects. For this,
+/// you need to use the [`DebugLinesPlugin::always_in_front`] constructor.
+/// ```
+/// use bevy::prelude::*;
+/// use bevy_prototype_debug_lines::*;
+///
+/// App::new()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugin(DebugLinesPlugin::always_in_front())
 ///     .run();
 /// ```
 #[derive(Debug, Default, Clone)]
 pub struct DebugLinesPlugin {
-    always_on_top: bool,
+    always_in_front: bool,
 }
 impl DebugLinesPlugin {
-    pub fn draw_on_top(always_on_top: bool) -> Self {
-        DebugLinesPlugin { always_on_top }
+    /// Always show debug lines in front of other objects
+    ///
+    /// This disables depth culling for the debug line, so that they
+    /// are always visible, regardless of whether there are other objects in
+    /// front.
+    pub fn always_in_front() -> Self {
+        DebugLinesPlugin {
+            always_in_front: true,
+        }
     }
 }
 impl Plugin for DebugLinesPlugin {
@@ -55,8 +75,8 @@ impl Plugin for DebugLinesPlugin {
             DEBUG_LINES_SHADER_HANDLE,
             Shader::from_wgsl(include_str!("debuglines.wgsl")),
         );
-        app.init_resource::<ImmLinesStorage>();
-        app.init_resource::<RetLinesStorage>();
+        app.init_resource::<ImmediateLinesStorage>();
+        app.init_resource::<RetainedLinesStorage>();
         app.add_startup_system(setup_system)
             .add_system_to_stage(CoreStage::Last, update_debug_lines_mesh.label("draw_lines"));
         app.sub_app_mut(RenderApp)
@@ -126,8 +146,7 @@ fn update_debug_lines_mesh(
             Retained(i) => lines.retained.fill_attributes(time, mesh, i),
         }
     }
-    // This needs to be done after `fill_attributes` because of the immediate buffer clears
-    lines.mark_expired();
+    lines.frame_init();
 }
 
 /// Initialize [`DebugLinesMesh`]'s [`Mesh`].
@@ -157,7 +176,8 @@ fn extract_debug_lines(mut commands: Commands, query: Query<Entity, With<DebugLi
 /// Marker Component for the [`Entity`] associated with the meshes rendered with the
 /// debuglines.wgsl shader.
 ///
-/// Stores the index of the mesh for the logic of `ImmLinesStorage` and `RetLinesStorage`
+/// Stores the index of the mesh for the logic of [`ImmediateLinesStorage`] and
+/// [`RetainedLinesStorage`]
 #[derive(Component)]
 enum DebugLinesMesh {
     /// Meshes for duration=0.0 lines
@@ -190,11 +210,11 @@ struct RenderDebugLinesMesh;
 /// user **should absolutely not interact with this**.
 #[derive(Debug, Default)]
 #[doc(hidden)]
-pub struct ImmLinesStorage {
+pub struct ImmediateLinesStorage {
     positions: Vec<[f32; 3]>,
     colors: Vec<[f32; 4]>,
 }
-impl ImmLinesStorage {
+impl ImmediateLinesStorage {
     fn add_at(&mut self, line_index: usize, position: Line<Vec3>, color: Line<Color>) {
         let i = line_index * 2;
         self.colors[i] = color.start.into();
@@ -216,7 +236,11 @@ impl ImmLinesStorage {
         }
     }
 
-    fn mark_expired(&mut self) {
+    /// Cull all lines that shouldn't be rendered anymore
+    ///
+    /// Since all lines in `ImmediateLinesStorage` should be removed each frame, this
+    /// simply set the length of the positions and colors vectors to 0.
+    fn frame_init(&mut self) {
         self.positions.clear();
         self.colors.clear();
     }
@@ -235,6 +259,7 @@ impl ImmLinesStorage {
         }
     }
 
+    /// Copy line descriptions into mesh attribute buffers
     fn fill_attributes(&self, mesh: &mut Mesh, mesh_index: usize) {
         use VertexAttributeValues::{Float32x3, Float32x4};
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
@@ -256,39 +281,50 @@ impl ImmLinesStorage {
 /// The [`DebugLines`] storage.
 #[derive(Debug, Default)]
 #[doc(hidden)]
-pub struct RetLinesStorage {
-    inner: ImmLinesStorage,
-    /// The timestamp in seconds after which a line should not be rendered anymore.
+pub struct RetainedLinesStorage {
+    lines: ImmediateLinesStorage,
+    /// The timestamp after which a line should not be rendered anymore.
     ///
-    /// `timestamp[i]` corresponds to `inner.add_at(i)`
-    timestamp: Vec<f32>,
+    /// It is represented as the number of seconds since the game started.
+    /// `expire_time[i]` corresponds to the i-th line in `lines` buffer.
+    expire_time: Vec<f32>,
     /// Index of lines that can be safely overwritten
     expired: Vec<u32>,
+    /// Whether we have computed expired lines this frame
+    expired_marked: bool,
 }
-impl RetLinesStorage {
-    fn add_line(&mut self, position: Line<Vec3>, color: Line<Color>, timestamp: f32) {
+impl RetainedLinesStorage {
+    fn add_line(&mut self, position: Line<Vec3>, color: Line<Color>, time: f32, duration: f32) {
+        if !self.expired_marked {
+            self.expired_marked = true;
+            self.mark_expired(time);
+        }
+        let expire_time = time + duration;
         if let Some(replaceable) = self.expired.pop() {
             let i = replaceable as usize;
-            self.inner.add_at(i, position, color);
-            self.timestamp[i] = timestamp;
-        } else if self.timestamp.len() >= MAX_LINES {
+            self.lines.add_at(i, position, color);
+            self.expire_time[i] = expire_time;
+        } else if self.expire_time.len() >= MAX_LINES {
             let i = MAX_LINES - 1;
-            self.inner.add_at(i, position, color);
-            self.timestamp[i] = timestamp;
+            self.lines.add_at(i, position, color);
+            self.expire_time[i] = expire_time;
         } else {
-            self.inner.push(position, color);
-            self.timestamp.push(timestamp);
+            self.lines.push(position, color);
+            self.expire_time.push(expire_time);
         }
     }
 
+    /// Fill the mesh indice buffer
+    ///
+    /// We only add the indices of points for the non-expired lines.
     fn fill_indices(&self, time: f32, buffer: &mut Vec<u16>, mesh: usize) {
         buffer.clear();
-        if let Some(new_content) = self.timestamp.chunks(MAX_LINES_PER_MESH).nth(mesh) {
+        if let Some(new_content) = self.expire_time.chunks(MAX_LINES_PER_MESH).nth(mesh) {
             buffer.extend(
                 new_content
                     .iter()
                     .enumerate()
-                    .filter(|(_, e)| **e >= time)
+                    .filter(|(_, expires_at)| **expires_at >= time)
                     .map(|(i, _)| i as u16)
                     .flat_map(|i| [i * 2, i * 2 + 1]),
             );
@@ -296,13 +332,18 @@ impl RetLinesStorage {
     }
 
     fn mark_expired(&mut self, time: f32) {
+        self.expired.clear();
         self.expired.extend(
-            self.timestamp
+            self.expire_time
                 .iter()
                 .enumerate()
-                .filter(|(i, e)| **e < time && i % 2 == 0)
+                .filter(|(i, expires_at)| **expires_at < time && i % 2 == 0)
                 .map(|(i, _)| i as u32 / 2),
         );
+    }
+
+    fn frame_init(&mut self) {
+        self.expired_marked = false;
     }
 
     fn fill_attributes(&self, time: f32, mesh: &mut Mesh, mesh_index: usize) {
@@ -311,10 +352,10 @@ impl RetLinesStorage {
             self.fill_indices(time, indices, mesh_index);
         }
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-            self.inner.fill_vertexes(vbuffer, mesh_index);
+            self.lines.fill_vertexes(vbuffer, mesh_index);
         }
         if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
-            self.inner.fill_colors(cbuffer, mesh_index);
+            self.lines.fill_colors(cbuffer, mesh_index);
         }
     }
 }
@@ -345,8 +386,8 @@ impl RetLinesStorage {
 /// ```
 #[derive(SystemParam)]
 pub struct DebugLines<'w, 's> {
-    immediate: ResMut<'w, ImmLinesStorage>,
-    retained: ResMut<'w, RetLinesStorage>,
+    immediate: ResMut<'w, ImmediateLinesStorage>,
+    retained: ResMut<'w, RetainedLinesStorage>,
     time: Res<'w, Time>,
     #[system_param(ignore)]
     _lifetimes: PhantomData<&'s ()>,
@@ -401,22 +442,26 @@ impl<'w, 's> DebugLines<'w, 's> {
         if duration == 0.0 {
             self.immediate.add_line(positions, colors);
         } else {
-            let timestamp = self.time.time_since_startup().as_secs_f32() + duration;
-            self.retained.add_line(positions, colors, timestamp);
+            let time = self.time.time_since_startup().as_secs_f32();
+            self.retained.add_line(positions, colors, time, duration);
         }
     }
 
-    fn mark_expired(&mut self) {
-        let time = self.time.time_since_startup().as_secs_f32();
-        self.immediate.mark_expired();
-        self.retained.mark_expired(time);
+    /// Prepare [`ImmediateLinesStorage`] and [`RetainedLinesStorage`] for next
+    /// frame.
+    ///
+    /// This clears the immediate mod buffers and tells the retained mod
+    /// buffers to recompute expired lines list.
+    fn frame_init(&mut self) {
+        self.immediate.frame_init();
+        self.retained.frame_init();
     }
 }
 
 struct DebugLinePipeline {
     mesh_pipeline: MeshPipeline,
     shader: Handle<Shader>,
-    always_on_top: bool,
+    always_in_front: bool,
 }
 impl FromWorld for DebugLinePipeline {
     fn from_world(render_world: &mut World) -> Self {
@@ -424,7 +469,7 @@ impl FromWorld for DebugLinePipeline {
         DebugLinePipeline {
             mesh_pipeline: render_world.get_resource::<MeshPipeline>().unwrap().clone(),
             shader: DEBUG_LINES_SHADER_HANDLE.typed(),
-            always_on_top: dbl_plugin.always_on_top,
+            always_in_front: dbl_plugin.always_in_front,
         }
     }
 }
@@ -459,7 +504,7 @@ impl SpecializedPipeline for DebugLinePipeline {
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone_weak();
         descriptor.primitive.topology = PrimitiveTopology::LineList;
         descriptor.primitive.cull_mode = None;
-        let depth_rate = if self.always_on_top {
+        let depth_rate = if self.always_in_front {
             f32::INFINITY
         } else {
             1.0

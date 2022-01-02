@@ -17,11 +17,11 @@ fn setup(mut commands: Commands, mut lines: DebugLines) {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
         ..Default::default()
     });
-    // Demonstrate "retained mod" lines
+    // A line that stays on screen 9 seconds
     lines.line_gradient(
         Vec3::new(1.0, -1.0, -1.0),
         Vec3::new(-1.0, 1.0, 1.0),
-        100.0,
+        9.0,
         Color::CYAN,
         Color::MIDNIGHT_BLUE,
     );
