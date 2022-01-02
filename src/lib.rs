@@ -73,12 +73,23 @@ impl Plugin for DebugLinesPlugin {
 const DEBUG_LINES_MESH_COUNT: usize = 4;
 
 const MAX_POINTS_PER_MESH: usize = 2_usize.pow(16);
+const MAX_LINES_PER_MESH: usize = MAX_POINTS_PER_MESH / 2;
 
 /// Maximum number of unique lines to draw at once.
 pub const MAX_LINES: usize = MAX_POINTS / 2;
 
 /// Maximum number of points.
 pub const MAX_POINTS: usize = MAX_POINTS_PER_MESH * DEBUG_LINES_MESH_COUNT;
+
+struct Line<T> {
+    start: T,
+    end: T,
+}
+impl<T> Line<T> {
+    fn new(start: T, end: T) -> Self {
+        Line { start, end }
+    }
+}
 
 fn spawn_debug_lines_mesh(meshes: &mut Assets<Mesh>, retain: DebugLinesMesh) -> impl Bundle {
     let is_immediate = matches!(retain, DebugLinesMesh::Immediate(_));
@@ -184,23 +195,24 @@ pub struct ImmLinesStorage {
     colors: Vec<[f32; 4]>,
 }
 impl ImmLinesStorage {
-    fn add_at(&mut self, i: usize, start: Vec3, end: Vec3, start_color: Color, end_color: Color) {
-        self.colors[i] = start_color.into();
-        self.colors[i + 1] = end_color.into();
-        self.positions[i] = start.into();
-        self.positions[i + 1] = end.into();
+    fn add_at(&mut self, line_index: usize, position: Line<Vec3>, color: Line<Color>) {
+        let i = line_index * 2;
+        self.colors[i] = color.start.into();
+        self.colors[i + 1] = color.end.into();
+        self.positions[i] = position.start.into();
+        self.positions[i + 1] = position.end.into();
     }
-    fn push(&mut self, start: Vec3, end: Vec3, start_color: Color, end_color: Color) {
-        self.colors.push(start_color.into());
-        self.colors.push(end_color.into());
-        self.positions.push(start.into());
-        self.positions.push(end.into());
+    fn push(&mut self, position: Line<Vec3>, color: Line<Color>) {
+        self.colors.push(color.start.into());
+        self.colors.push(color.end.into());
+        self.positions.push(position.start.into());
+        self.positions.push(position.end.into());
     }
-    fn add_line(&mut self, start: Vec3, end: Vec3, start_color: Color, end_color: Color) {
+    fn add_line(&mut self, position: Line<Vec3>, color: Line<Color>) {
         if self.positions.len() >= MAX_POINTS {
-            self.add_at(MAX_POINTS - 2, start, end, start_color, end_color);
+            self.add_at(MAX_LINES - 1, position, color);
         } else {
-            self.push(start, end, start_color, end_color);
+            self.push(position, color);
         }
     }
 
@@ -246,55 +258,50 @@ impl ImmLinesStorage {
 #[doc(hidden)]
 pub struct RetLinesStorage {
     inner: ImmLinesStorage,
-    expiry: Vec<f32>,
+    /// The timestamp in seconds after which a line should not be rendered anymore.
+    ///
+    /// `timestamp[i]` corresponds to `inner.add_at(i)`
+    timestamp: Vec<f32>,
+    /// Index of lines that can be safely overwritten
     expired: Vec<u32>,
 }
 impl RetLinesStorage {
-    fn add_line(
-        &mut self,
-        start: Vec3,
-        end: Vec3,
-        start_color: Color,
-        end_color: Color,
-        expiry: f32,
-    ) {
+    fn add_line(&mut self, position: Line<Vec3>, color: Line<Color>, timestamp: f32) {
         if let Some(replaceable) = self.expired.pop() {
             let i = replaceable as usize;
-            self.inner.add_at(i, start, end, start_color, end_color);
-            self.expiry[i] = expiry;
-            self.expiry[i + 1] = expiry;
-        } else if self.expiry.len() >= MAX_POINTS {
-            self.inner
-                .add_at(MAX_POINTS - 2, start, end, start_color, end_color);
-            self.expiry[MAX_POINTS - 2] = expiry;
-            self.expiry[MAX_POINTS - 1] = expiry;
+            self.inner.add_at(i, position, color);
+            self.timestamp[i] = timestamp;
+        } else if self.timestamp.len() >= MAX_LINES {
+            let i = MAX_LINES - 1;
+            self.inner.add_at(i, position, color);
+            self.timestamp[i] = timestamp;
         } else {
-            self.inner.push(start, end, start_color, end_color);
-            self.expiry.push(expiry);
-            self.expiry.push(expiry);
+            self.inner.push(position, color);
+            self.timestamp.push(timestamp);
         }
     }
 
     fn fill_indices(&self, time: f32, buffer: &mut Vec<u16>, mesh: usize) {
         buffer.clear();
-        if let Some(new_content) = self.expiry.chunks(MAX_POINTS_PER_MESH).nth(mesh) {
+        if let Some(new_content) = self.timestamp.chunks(MAX_LINES_PER_MESH).nth(mesh) {
             buffer.extend(
                 new_content
                     .iter()
                     .enumerate()
                     .filter(|(_, e)| **e >= time)
-                    .map(|(i, _)| i as u16),
+                    .map(|(i, _)| i as u16)
+                    .flat_map(|i| [i * 2, i * 2 + 1]),
             );
         }
     }
 
     fn mark_expired(&mut self, time: f32) {
         self.expired.extend(
-            self.expiry
+            self.timestamp
                 .iter()
                 .enumerate()
                 .filter(|(i, e)| **e < time && i % 2 == 0)
-                .map(|(i, _)| i as u32),
+                .map(|(i, _)| i as u32 / 2),
         );
     }
 
@@ -389,12 +396,13 @@ impl<'w, 's> DebugLines<'w, 's> {
         start_color: Color,
         end_color: Color,
     ) {
+        let positions = Line { start, end };
+        let colors = Line::new(start_color, end_color);
         if duration == 0.0 {
-            self.immediate.add_line(start, end, start_color, end_color);
+            self.immediate.add_line(positions, colors);
         } else {
-            let expiry = self.time.time_since_startup().as_secs_f32() + duration;
-            self.retained
-                .add_line(start, end, start_color, end_color, expiry);
+            let timestamp = self.time.time_since_startup().as_secs_f32() + duration;
+            self.retained.add_line(positions, colors, timestamp);
         }
     }
 
@@ -451,7 +459,11 @@ impl SpecializedPipeline for DebugLinePipeline {
         descriptor.fragment.as_mut().unwrap().shader = self.shader.clone_weak();
         descriptor.primitive.topology = PrimitiveTopology::LineList;
         descriptor.primitive.cull_mode = None;
-        let depth_rate = if self.always_on_top { 10000.0 } else { 1.0 };
+        let depth_rate = if self.always_on_top {
+            f32::INFINITY
+        } else {
+            1.0
+        };
         descriptor.depth_stencil.as_mut().unwrap().bias.slope_scale = depth_rate;
         descriptor
     }
