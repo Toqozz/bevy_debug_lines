@@ -20,6 +20,14 @@ Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
 bevy_prototype_debug_lines = "0.4.0"
 ```
 
+If you are using bevy_debug_lines for 3d rendering, you must add the `3d`
+feature like so:
+```toml
+[dependencies]
+bevy_prototype_debug_lines = { version = "0.4.0", features = ["3d"] }
+```
+
+
 Add the plugin in your `App::new()` phase:
 ```rust
 use bevy::prelude::*;
@@ -65,6 +73,28 @@ fn main() {
 
 See [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/examples) for more complete usage examples.
 
+## Troubleshooting
+
+### Lines do not show up
+
+Lines do not show up on screen, even if I added the `DebugLinesPlugin` and
+used `DebugLines::lines`
+
+Check the dimension feature of `bevy_debug_lines`, when running your game,
+there should be a log message looking like:
+```
+INFO bevy_prototype_debug_lines: Loaded 2d debug lines plugin.
+```
+Pay attention to **`Loaded 2d debug`** this should match what you are using in
+your game. Is it a 3d game? If so, you should add the
+`bevy_prototype_debug_lines/3d` feature flag to your `Cargo.toml`. It should
+look like this:
+
+```toml
+bevy_prototype_debug_lines = { version = "0.4.0", features = ["3d"] }
+```
+
+
 ## Running Examples
 You can run the examples like so:
 ```shell
@@ -92,6 +122,10 @@ This is technically a non-breaking change (i.e. your code will still compile) be
   `.add_plugin(DebugLinesPlugin::always_in_front())`
 * `DebugLinesPlugin` now has a constructor, you should replace `.add_plugin(DebugLinesPlugin)`
   in your code by `.add_plugin(DebugLinesPlugin::default())`.
+* Added the `3d` feature. Due to the changes in the way the plugin works, it is
+  now necessary to separate the 2d and 3d plugins. If you are using
+  `bevy_debug_lines` in a 3d game, please add the `features = ["3d"] ` line to
+  your `bevy_prototype_debug_lines` dependency.
 
 ## Bevy Version Support
 

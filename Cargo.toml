@@ -16,18 +16,29 @@ exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 bevy = { version = "0.5", default-features = false, features = [ "render" ] }
 
 [patch.crates-io]
-bevy = { git = "https://github.com/bevyengine/bevy", rev = "76ec709edee77c28a4a027ff1ab8d768be523633" }
+bevy = { git = "https://github.com/bevyengine/bevy", rev = "c6fc51c29736a9796d5fc20a04829c5231d666e0" }
 
 [features]
-example_deps = [
+example_deps_2d = [
     "bevy/bevy_winit",
     "bevy/bevy_gltf",
     "bevy/x11",
 ]
+example_deps = [
+    "bevy/bevy_winit",
+    "bevy/bevy_gltf",
+    "bevy/x11",
+    "3d",
+]
+3d = []
 
 [[example]]
 name = "3d"
 required-features = ["example_deps"]
+
+[[example]]
+name = "2d"
+required-features = ["example_deps_2d"]
 
 [[example]]
 name = "bench"

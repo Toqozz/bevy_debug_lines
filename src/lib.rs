@@ -1,29 +1,58 @@
-use std::marker::PhantomData;
+#[cfg(not(feature = "3d"))]
+mod dim2;
+#[cfg(feature = "3d")]
+mod dim3;
 
 use bevy::{
-    asset::{Assets, Handle, HandleUntyped},
-    core_pipeline::Opaque3d,
+    asset::{Assets, HandleUntyped},
     ecs::system::SystemParam,
-    pbr::{
-        DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup,
-        SetMeshViewBindGroup,
-    },
     prelude::*,
     reflect::TypeUuid,
+    render::render_resource::Shader,
     render::{
         mesh::{Indices, Mesh, VertexAttributeValues},
-        render_phase::{AddRenderCommand, DrawFunctions, RenderPhase, SetItemPipeline},
-        render_resource::{
-            PrimitiveTopology, RenderPipelineCache, RenderPipelineDescriptor, Shader,
-            SpecializedPipeline, SpecializedPipelines, VertexAttribute, VertexBufferLayout,
-            VertexFormat, VertexStepMode,
-        },
-        view::{ExtractedView, Msaa},
-        RenderApp, RenderStage,
+        render_phase::AddRenderCommand,
+        render_resource::PrimitiveTopology,
     },
 };
+use std::marker::PhantomData;
 
-const DEBUG_LINES_SHADER_HANDLE: HandleUntyped =
+// This module exists to "isolate" the `#[cfg]` attributes to this part of the
+// code. Otherwise, we would polute the code with a lot of feature
+// gates-specific code.
+#[cfg(feature = "3d")]
+mod dim {
+    pub(crate) use crate::dim3::{queue_debug_lines, DebugLinePipeline, DrawDebugLines};
+    pub use bevy::core_pipeline::Opaque3d as Phase;
+    use bevy::{asset::Handle, render::mesh::Mesh};
+    pub(crate) type MeshHandle = Handle<Mesh>;
+    pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> {
+        from
+    }
+    pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
+        from
+    }
+    pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
+    pub(crate) const DIMMENSION: &str = "3d";
+}
+#[cfg(not(feature = "3d"))]
+mod dim {
+    use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
+
+    pub(crate) use crate::dim2::{queue_debug_lines, DebugLinePipeline, DrawDebugLines};
+    pub(crate) use bevy::core_pipeline::Transparent2d as Phase;
+    pub(crate) type MeshHandle = Mesh2dHandle;
+    pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> {
+        &from.0
+    }
+    pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
+        Mesh2dHandle(from)
+    }
+    pub(crate) const SHADER_FILE: &str = include_str!("debuglines2d.wgsl");
+    pub(crate) const DIMMENSION: &str = "2d";
+}
+
+pub(crate) const DEBUG_LINES_SHADER_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 17477439189930443325);
 
 /// Bevy plugin, for initializing stuff.
@@ -70,24 +99,32 @@ impl DebugLinesPlugin {
 }
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
+        use bevy::render::{render_resource::SpecializedPipelines, RenderApp, RenderStage};
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         shaders.set_untracked(
             DEBUG_LINES_SHADER_HANDLE,
-            Shader::from_wgsl(include_str!("debuglines.wgsl")),
+            Shader::from_wgsl(dim::SHADER_FILE),
         );
         app.init_resource::<ImmediateLinesStorage>();
         app.init_resource::<RetainedLinesStorage>();
         app.add_startup_system(setup_system)
             .add_system_to_stage(CoreStage::Last, update_debug_lines_mesh.label("draw_lines"));
         app.sub_app_mut(RenderApp)
-            .insert_resource(self.clone())
-            .add_render_command::<Opaque3d, DrawDebugLines>()
-            .init_resource::<DebugLinePipeline>()
-            .init_resource::<SpecializedPipelines<DebugLinePipeline>>()
+            .insert_resource(DebugLinesConfig {
+                always_in_front: self.always_in_front,
+            })
+            .add_render_command::<dim::Phase, dim::DrawDebugLines>()
+            .init_resource::<dim::DebugLinePipeline>()
+            .init_resource::<SpecializedPipelines<dim::DebugLinePipeline>>()
             .add_system_to_stage(RenderStage::Extract, extract_debug_lines)
-            .add_system_to_stage(RenderStage::Queue, queue_debug_lines);
-        info!("Loaded debug lines plugin.");
+            .add_system_to_stage(RenderStage::Queue, dim::queue_debug_lines);
+        info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
     }
+}
+
+#[derive(Debug, Default, Clone)]
+pub(crate) struct DebugLinesConfig {
+    pub always_in_front: bool,
 }
 
 const DEBUG_LINES_MESH_COUNT: usize = 4;
@@ -114,7 +151,7 @@ impl<T> Line<T> {
 fn spawn_debug_lines_mesh(meshes: &mut Assets<Mesh>, retain: DebugLinesMesh) -> impl Bundle {
     let is_immediate = matches!(retain, DebugLinesMesh::Immediate(_));
     (
-        meshes.add(debug_lines_mesh(is_immediate)),
+        dim::into_handle(meshes.add(debug_lines_mesh(is_immediate))),
         Transform::default(),
         GlobalTransform::default(),
         Visibility::default(),
@@ -133,14 +170,14 @@ fn setup_system(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 }
 
 fn update_debug_lines_mesh(
-    debug_line_meshes: Query<(&Handle<Mesh>, &DebugLinesMesh)>,
+    debug_line_meshes: Query<(&dim::MeshHandle, &DebugLinesMesh)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut lines: DebugLines,
 ) {
     use DebugLinesMesh::{Immediate, Retained};
     let time = lines.time.time_since_startup().as_secs_f32();
     for (mesh_handle, retain_mod) in debug_line_meshes.iter() {
-        let mesh = meshes.get_mut(mesh_handle).unwrap();
+        let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
         match *retain_mod {
             Immediate(i) => lines.immediate.fill_attributes(mesh, i),
             Retained(i) => lines.retained.fill_attributes(time, mesh, i),
@@ -194,7 +231,7 @@ impl Default for DebugLinesMesh {
 #[derive(Component)]
 struct RenderDebugLinesMesh;
 
-// NOTE: consider this: we could just hold a Handle<Mesh> to the DebugLinesMesh
+// NOTE: consider this: we could just hold a MeshHandle to the DebugLinesMesh
 // and modify it in-place, so that there is no need to update the mesh every
 // frame on top of keeping track of all those buffers in `LinesStorage`.
 // However, I implemented that, and found out it was about 3 times slower in
@@ -457,100 +494,3 @@ impl<'w, 's> DebugLines<'w, 's> {
         self.retained.frame_init();
     }
 }
-
-struct DebugLinePipeline {
-    mesh_pipeline: MeshPipeline,
-    shader: Handle<Shader>,
-    always_in_front: bool,
-}
-impl FromWorld for DebugLinePipeline {
-    fn from_world(render_world: &mut World) -> Self {
-        let dbl_plugin = render_world.get_resource::<DebugLinesPlugin>().unwrap();
-        DebugLinePipeline {
-            mesh_pipeline: render_world.get_resource::<MeshPipeline>().unwrap().clone(),
-            shader: DEBUG_LINES_SHADER_HANDLE.typed(),
-            always_in_front: dbl_plugin.always_in_front,
-        }
-    }
-}
-
-impl SpecializedPipeline for DebugLinePipeline {
-    type Key = MeshPipelineKey;
-
-    fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
-        use VertexFormat::{Float32x3, Float32x4};
-        let mut descriptor = self.mesh_pipeline.specialize(key);
-        descriptor.vertex.shader = self.shader.clone_weak();
-        descriptor.vertex.buffers[0] = VertexBufferLayout {
-            // NOTE: I've no idea why, but `color` is at offset zero and
-            // `position` at 4*4. Swapping breaks everything
-            array_stride: 4 * 4 + 4 * 3, // sizeof(Float32x4) + sizeof(Float32x3)
-            step_mode: VertexStepMode::Vertex,
-            attributes: vec![
-                VertexAttribute {
-                    // Vertex.color
-                    format: Float32x4,
-                    offset: 0,
-                    shader_location: 0,
-                },
-                VertexAttribute {
-                    // Vertex.place (position)
-                    format: Float32x3,
-                    offset: 4 * 4, // sizeof(Float32x4)
-                    shader_location: 1,
-                },
-            ],
-        };
-        descriptor.fragment.as_mut().unwrap().shader = self.shader.clone_weak();
-        descriptor.primitive.topology = PrimitiveTopology::LineList;
-        descriptor.primitive.cull_mode = None;
-        let depth_rate = if self.always_in_front {
-            f32::INFINITY
-        } else {
-            1.0
-        };
-        descriptor.depth_stencil.as_mut().unwrap().bias.slope_scale = depth_rate;
-        descriptor
-    }
-}
-
-fn queue_debug_lines(
-    opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
-    debug_line_pipeline: Res<DebugLinePipeline>,
-    mut pipeline_cache: ResMut<RenderPipelineCache>,
-    mut specialized_pipelines: ResMut<SpecializedPipelines<DebugLinePipeline>>,
-    msaa: Res<Msaa>,
-    material_meshes: Query<(Entity, &MeshUniform), With<RenderDebugLinesMesh>>,
-    mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
-) {
-    let draw_custom = opaque_3d_draw_functions
-        .read()
-        .get_id::<DrawDebugLines>()
-        .unwrap();
-    let key = MeshPipelineKey::from_msaa_samples(msaa.samples);
-    for (view, mut transparent_phase) in views.iter_mut() {
-        let view_matrix = view.transform.compute_matrix();
-        let view_row_2 = view_matrix.row(2);
-
-        let add_render_phase = |(entity, mesh_uniform): (Entity, &MeshUniform)| {
-            transparent_phase.add(Opaque3d {
-                entity,
-                pipeline: specialized_pipelines.specialize(
-                    &mut pipeline_cache,
-                    &debug_line_pipeline,
-                    key,
-                ),
-                draw_function: draw_custom,
-                distance: view_row_2.dot(mesh_uniform.transform.col(3)),
-            });
-        };
-        material_meshes.iter().for_each(add_render_phase);
-    }
-}
-
-type DrawDebugLines = (
-    SetItemPipeline,
-    SetMeshViewBindGroup<0>,
-    SetMeshBindGroup<1>,
-    DrawMesh,
-);
