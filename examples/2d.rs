@@ -19,7 +19,7 @@ fn setup(mut commands: Commands) {
     commands.spawn_bundle(camera);
 }
 
-fn demo(mut lines: DebugLines) {
+fn demo(mut lines: ResMut<DebugLines>) {
     lines.line(
         Vec3::new(-400.0, 200.0, 0.0),
         Vec3::new(400.0, 200.0, 0.0),

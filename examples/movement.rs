@@ -39,7 +39,7 @@ fn setup(
 struct MoveWithMouse;
 fn move_with_mouse(
     mut mouse_motion: EventReader<MouseMotion>,
-    mut lines: DebugLines,
+    mut lines: ResMut<DebugLines>,
     mut query: Query<&mut Transform, With<MoveWithMouse>>,
 ) {
     let mut delta = Vec2::ZERO;

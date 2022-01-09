@@ -5,7 +5,6 @@ mod dim3;
 
 use bevy::{
     asset::{Assets, HandleUntyped},
-    ecs::system::SystemParam,
     prelude::*,
     reflect::TypeUuid,
     render::render_resource::Shader,
@@ -15,7 +14,6 @@ use bevy::{
         render_resource::PrimitiveTopology,
     },
 };
-use std::marker::PhantomData;
 
 // This module exists to "isolate" the `#[cfg]` attributes to this part of the
 // code. Otherwise, we would polute the code with a lot of feature
@@ -105,10 +103,11 @@ impl Plugin for DebugLinesPlugin {
             DEBUG_LINES_SHADER_HANDLE,
             Shader::from_wgsl(dim::SHADER_FILE),
         );
-        app.init_resource::<ImmediateLinesStorage>();
-        app.init_resource::<RetainedLinesStorage>();
-        app.add_startup_system(setup_system)
-            .add_system_to_stage(CoreStage::Last, update_debug_lines_mesh.label("draw_lines"));
+        app.init_resource::<DebugLines>();
+        app.add_startup_system(setup_system).add_system_to_stage(
+            CoreStage::PostUpdate,
+            update_debug_lines_mesh.label("draw_lines"),
+        );
         app.sub_app_mut(RenderApp)
             .insert_resource(DebugLinesConfig {
                 always_in_front: self.always_in_front,
@@ -171,11 +170,12 @@ fn setup_system(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
 fn update_debug_lines_mesh(
     debug_line_meshes: Query<(&dim::MeshHandle, &DebugLinesMesh)>,
+    time: Res<Time>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut lines: DebugLines,
+    mut lines: ResMut<DebugLines>,
 ) {
     use DebugLinesMesh::{Immediate, Retained};
-    let time = lines.time.time_since_startup().as_secs_f32();
+    let time = time.seconds_since_startup() as f32;
     for (mesh_handle, retain_mod) in debug_line_meshes.iter() {
         let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
         match *retain_mod {
@@ -183,7 +183,7 @@ fn update_debug_lines_mesh(
             Retained(i) => lines.retained.fill_attributes(time, mesh, i),
         }
     }
-    lines.frame_init();
+    lines.frame_init(time);
 }
 
 /// Initialize [`DebugLinesMesh`]'s [`Mesh`].
@@ -242,12 +242,8 @@ struct RenderDebugLinesMesh;
 // encoding the color is not more expensive than moving 4 values in memory 3
 // times
 /// The [`DebugLines`] storage for immediate mod lines.
-///
-/// This is `pub` because of the `SystemParam` macro on [`DebugLines`]. The end
-/// user **should absolutely not interact with this**.
 #[derive(Debug, Default)]
-#[doc(hidden)]
-pub struct ImmediateLinesStorage {
+struct ImmediateLinesStorage {
     positions: Vec<[f32; 3]>,
     colors: Vec<[f32; 4]>,
 }
@@ -266,10 +262,10 @@ impl ImmediateLinesStorage {
         self.positions.push(position.end.into());
     }
     fn add_line(&mut self, position: Line<Vec3>, color: Line<Color>) {
-        if self.positions.len() >= MAX_POINTS {
-            self.add_at(MAX_LINES - 1, position, color);
-        } else {
+        if self.positions.len() < MAX_POINTS {
             self.push(position, color);
+        } else {
+            warn!("Exceeded max number of lines, discarding new ones");
         }
     }
 
@@ -309,16 +305,12 @@ impl ImmediateLinesStorage {
 }
 /// The [`DebugLines`] storage for retained mod lines.
 ///
-/// This is `pub` because of the `SystemParam` macro on [`DebugLines`]. The end
-/// user **should absolutely not interact with this**.
-///
 /// This holds the buffers for the mesh assigned to render the debug lines. It
 /// dynamically generates the indexes to disable/enable expired lines without
 /// changing the layout of the buffers.
 /// The [`DebugLines`] storage.
 #[derive(Debug, Default)]
-#[doc(hidden)]
-pub struct RetainedLinesStorage {
+struct RetainedLinesStorage {
     lines: ImmediateLinesStorage,
     /// The timestamp after which a line should not be rendered anymore.
     ///
@@ -341,17 +333,15 @@ impl RetainedLinesStorage {
             let i = replaceable as usize;
             self.lines.add_at(i, position, color);
             self.expire_time[i] = expire_time;
-        } else if self.expire_time.len() >= MAX_LINES {
-            let i = MAX_LINES - 1;
-            self.lines.add_at(i, position, color);
-            self.expire_time[i] = expire_time;
-        } else {
+        } else if self.expire_time.len() < MAX_LINES {
             self.lines.push(position, color);
             self.expire_time.push(expire_time);
+        } else {
+            warn!("Exceeded max number of lines, discarding new ones");
         }
     }
 
-    /// Fill the mesh indice buffer
+    /// Fill the mesh indices buffer
     ///
     /// We only add the indices of points for the non-expired lines.
     fn fill_indices(&self, time: f32, buffer: &mut Vec<u16>, mesh: usize) {
@@ -405,7 +395,7 @@ impl RetainedLinesStorage {
 /// use bevy_prototype_debug_lines::*;
 ///
 /// // Draws 3 horizontal lines, which disappear after 1 frame.
-/// fn some_system(mut lines: DebugLines) {
+/// fn some_system(mut lines: ResMut<DebugLines>) {
 ///     lines.line(Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0), 0.0);
 ///     lines.line_colored(
 ///         Vec3::new(-1.0, 0.0, 0.0),
@@ -421,16 +411,14 @@ impl RetainedLinesStorage {
 ///     );
 /// }
 /// ```
-#[derive(SystemParam)]
-pub struct DebugLines<'w, 's> {
-    immediate: ResMut<'w, ImmediateLinesStorage>,
-    retained: ResMut<'w, RetainedLinesStorage>,
-    time: Res<'w, Time>,
-    #[system_param(ignore)]
-    _lifetimes: PhantomData<&'s ()>,
+#[derive(Default)]
+pub struct DebugLines {
+    immediate: ImmediateLinesStorage,
+    retained: RetainedLinesStorage,
+    secs_since_startup: f32,
 }
 
-impl<'w, 's> DebugLines<'w, 's> {
+impl DebugLines {
     /// Draw a line in world space, or update an existing line
     ///
     /// # Arguments
@@ -479,7 +467,7 @@ impl<'w, 's> DebugLines<'w, 's> {
         if duration == 0.0 {
             self.immediate.add_line(positions, colors);
         } else {
-            let time = self.time.time_since_startup().as_secs_f32();
+            let time = self.secs_since_startup;
             self.retained.add_line(positions, colors, time, duration);
         }
     }
@@ -489,7 +477,8 @@ impl<'w, 's> DebugLines<'w, 's> {
     ///
     /// This clears the immediate mod buffers and tells the retained mod
     /// buffers to recompute expired lines list.
-    fn frame_init(&mut self) {
+    fn frame_init(&mut self, time: f32) {
+        self.secs_since_startup = time;
         self.immediate.frame_init();
         self.retained.frame_init();
     }

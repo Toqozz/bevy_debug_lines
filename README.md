@@ -46,7 +46,7 @@ Draw a line in whatever system you have using the `DebugLines` system parameter:
 ```rust
 fn some_system(
 //  ...
-    mut lines: DebugLines,
+    mut lines: ResMut<DebugLines>,
 ) {
     let start = Vec3::splat(-1.0);
     let end = Vec3::splat(1.0);
@@ -114,8 +114,6 @@ This is technically a non-breaking change (i.e. your code will still compile) be
 * Complete rewrite
 * Support bevy 0.6
 * Use a wgsl shader, which should improve web compatibility
-* `DebugLines` is now a `SystemParam`, you should replace `mut lines: ResMut<DebugLines>`
-  in your code by a simple `mut lines: DebugLines`
 * The depth check is not supported through the `DebugLines.depth_check` field
   anymore. You need to set it when initializing the plugin. By default depth
   test is disabled but can be enabled with:

@@ -33,7 +33,7 @@ fn setup(
     });
 }
 
-fn demo(mut lines: DebugLines) {
+fn demo(mut lines: ResMut<DebugLines>) {
     lines.line_gradient(
         Vec3::new(-1.0, -1.0, -1.0),
         Vec3::new(1.0, 1.0, 1.0),

@@ -26,7 +26,7 @@ fn setup(mut commands: Commands) {
     });
 }
 
-fn demo_circle(time: Res<Time>, mut lines: DebugLines) {
+fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
     use bevy_prototype_debug_lines::MAX_LINES;
     use std::f32::consts::PI;
 

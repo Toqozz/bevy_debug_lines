@@ -12,7 +12,7 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut lines: DebugLines) {
+fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
         ..Default::default()
@@ -27,7 +27,7 @@ fn setup(mut commands: Commands, mut lines: DebugLines) {
     );
 }
 
-fn demo(time: Res<Time>, mut lines: DebugLines) {
+fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
     let seconds = time.seconds_since_startup() as f32;
 
     lines.line(
