@@ -42,7 +42,7 @@ fn main() {
 }
 ```
 
-Draw a line in whatever system you have using the `DebugLines` system parameter:
+Draw a line in whatever system you have using the `DebugLines` resource:
 ```rust
 fn some_system(
 //  ...
@@ -77,10 +77,10 @@ See [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/exampl
 
 ### Lines do not show up
 
-Lines do not show up on screen, even if I added the `DebugLinesPlugin` and
+**Problem**: Lines do not show up on screen, even if I added the `DebugLinesPlugin` and
 used `DebugLines::lines`
 
-Check the dimension feature of `bevy_debug_lines`, when running your game,
+**Solution**: Check the dimension feature of `bevy_debug_lines`, when running your game,
 there should be a log message looking like:
 ```
 INFO bevy_prototype_debug_lines: Loaded 2d debug lines plugin.
@@ -116,7 +116,7 @@ This is technically a non-breaking change (i.e. your code will still compile) be
 * Use a wgsl shader, which should improve web compatibility
 * The depth check is not supported through the `DebugLines.depth_check` field
   anymore. You need to set it when initializing the plugin. By default depth
-  test is disabled but can be enabled with:
+  test is enabled but can be disabled with:
   `.add_plugin(DebugLinesPlugin::always_in_front())`
 * `DebugLinesPlugin` now has a constructor, you should replace `.add_plugin(DebugLinesPlugin)`
   in your code by `.add_plugin(DebugLinesPlugin::default())`.

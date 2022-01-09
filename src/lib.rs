@@ -16,7 +16,7 @@ use bevy::{
 };
 
 // This module exists to "isolate" the `#[cfg]` attributes to this part of the
-// code. Otherwise, we would polute the code with a lot of feature
+// code. Otherwise, we would pollute the code with a lot of feature
 // gates-specific code.
 #[cfg(feature = "3d")]
 mod dim {
