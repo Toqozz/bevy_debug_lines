@@ -24,7 +24,7 @@ use bevy::render::{
 /// use bevy_prototype_debug_lines::*;
 ///
 /// fn main() {
-///     App::build()
+///     App::new()
 ///     .add_plugins(DefaultPlugins)
 ///     .add_plugin(DebugLinesPlugin)
 ///     ...
@@ -39,7 +39,7 @@ use bevy::render::{
 /// use bevy_prototype_debug_lines::*;
 ///
 /// fn main() {
-///     App::build()
+///     App::new()
 ///     .add_plugins(DefaultPlugins)
 ///     .add_plugin(DebugLinesPlugin)
 ///     .insert_resource(DebugLines { depth_test: true, ..Default::default() })

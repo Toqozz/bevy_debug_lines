@@ -3,7 +3,7 @@ use bevy::{input::mouse::MouseMotion, prelude::*};
 use bevy_prototype_debug_lines::{ DebugLinesPlugin, DebugLines };
 
 fn main() {
-    App::build()
+    App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin)
