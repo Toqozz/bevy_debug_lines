@@ -11,8 +11,8 @@ fn main() {
             depth_test: true,
             ..Default::default()
         })
-        .add_startup_system(setup.system())
-        .add_system(demo.system())
+        .add_startup_system(setup)
+        .add_system(demo)
         .run();
 }
 

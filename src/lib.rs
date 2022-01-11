@@ -52,16 +52,11 @@ impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
         app.add_asset::<LineShader>()
             .init_resource::<DebugLines>()
-            .add_startup_system(setup.system())
+            .add_startup_system(setup)
+            .add_system_to_stage(CoreStage::PostUpdate, draw_lines.label("draw_lines"))
             .add_system_to_stage(
                 CoreStage::PostUpdate,
-                draw_lines.system().label("draw_lines"),
-            )
-            .add_system_to_stage(
-                CoreStage::PostUpdate,
-                asset_shader_defs_system::<LineShader>
-                    .system()
-                    .before("draw_lines"),
+                asset_shader_defs_system::<LineShader>.before("draw_lines"),
             );
     }
 }
