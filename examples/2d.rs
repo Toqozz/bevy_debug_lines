@@ -6,9 +6,9 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin)
-        .add_startup_system(setup.system())
-        .add_system(demo.system())
+        .add_plugin(DebugLinesPlugin::always_in_front())
+        .add_startup_system(setup)
+        .add_system(demo)
         .run();
 }
 
@@ -24,11 +24,11 @@ fn demo(mut lines: ResMut<DebugLines>) {
         Vec3::new(-400.0, 200.0, 0.0),
         Vec3::new(400.0, 200.0, 0.0),
         0.0,
-    ); // Units are generally "smaller" for 2d, so thickness should be higher.
+    );
     lines.line_colored(
         Vec3::new(-400.0, 0.0, 0.0),
         Vec3::new(400.0, 0.0, 0.0),
-        0.0,
+        0.9,
         Color::GREEN,
     );
     lines.line_gradient(
@@ -37,5 +37,19 @@ fn demo(mut lines: ResMut<DebugLines>) {
         0.0,
         Color::WHITE,
         Color::PINK,
+    );
+    lines.line_gradient(
+        Vec3::new(-100.0, 100.0, 0.0),
+        Vec3::new(100.0, -100.0, 0.0),
+        0.8,
+        Color::WHITE,
+        Color::PINK,
+    );
+    lines.line_gradient(
+        Vec3::new(-100.0, -100.0, 0.0),
+        Vec3::new(100.0, 100.0, 0.0),
+        0.3,
+        Color::MIDNIGHT_BLUE,
+        Color::YELLOW_GREEN,
     );
 }

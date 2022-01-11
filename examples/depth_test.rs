@@ -6,11 +6,7 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin)
-        .insert_resource(DebugLines {
-            depth_test: true,
-            ..Default::default()
-        })
+        .add_plugin(DebugLinesPlugin::always_in_front())
         .add_startup_system(setup.system())
         .add_system(demo.system())
         .run();
