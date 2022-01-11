@@ -1,18 +1,19 @@
 //! # bevy_debug_lines
-//! 
+//!
 //! A plugin for drawing performant debug lines without a lot of hassle.
 
 #![allow(dead_code)]
 
 use bevy::prelude::*;
+use bevy::reflect::TypeUuid;
+use bevy::render::RenderStage;
 use bevy::render::{
     mesh::VertexAttributeValues,
-    pipeline::{ PrimitiveTopology, PipelineDescriptor, RenderPipeline, PrimitiveState, CullMode  },
-    shader::{ asset_shader_defs_system, ShaderStages, ShaderStage, ShaderDefs },
-    render_graph::{ AssetRenderResourcesNode, RenderGraph, base },
+    pipeline::{Face, PipelineDescriptor, PrimitiveState, PrimitiveTopology, RenderPipeline},
+    render_graph::{base, AssetRenderResourcesNode, RenderGraph},
     renderer::RenderResources,
+    shader::{asset_shader_defs_system, ShaderDefs, ShaderStage, ShaderStages},
 };
-use bevy::reflect::TypeUuid;
 
 /// Bevy plugin, for initializing stuff.
 ///
@@ -48,13 +49,20 @@ use bevy::reflect::TypeUuid;
 /// ```
 pub struct DebugLinesPlugin;
 impl Plugin for DebugLinesPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app
-            .add_asset::<LineShader>()
+    fn build(&self, app: &mut App) {
+        app.add_asset::<LineShader>()
             .init_resource::<DebugLines>()
             .add_startup_system(setup.system())
-            .add_system_to_stage(CoreStage::PostUpdate, draw_lines.system().label("draw_lines"))
-            .add_system_to_stage(CoreStage::PostUpdate, asset_shader_defs_system::<LineShader>.system().before("draw_lines"));
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                draw_lines.system().label("draw_lines"),
+            )
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                asset_shader_defs_system::<LineShader>
+                    .system()
+                    .before("draw_lines"),
+            );
     }
 }
 
@@ -66,7 +74,10 @@ pub const MAX_POINTS: usize = MAX_LINES * 2;
 fn create_mesh() -> Mesh {
     let mut mesh = Mesh::new(PrimitiveTopology::LineList);
     let positions = vec![[0.0, 0.0, 0.0]; MAX_LINES * 2];
-    mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, VertexAttributeValues::Float3(positions.into()));
+    mesh.set_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        VertexAttributeValues::Float32x3(positions.into()),
+    );
 
     mesh
 }
@@ -80,17 +91,20 @@ fn setup(
     mut materials: ResMut<Assets<LineShader>>,
     mut render_graph: ResMut<RenderGraph>,
 ) {
-    let mut p = 
-        PipelineDescriptor::default_config(
-            ShaderStages {
-                vertex: shaders.add(Shader::from_glsl(ShaderStage::Vertex, include_str!("line.vert"))),
-                fragment: Some(shaders.add(Shader::from_glsl(ShaderStage::Fragment, include_str!("line.frag")))),
-            }
-        );
+    let mut p = PipelineDescriptor::default_config(ShaderStages {
+        vertex: shaders.add(Shader::from_glsl(
+            ShaderStage::Vertex,
+            include_str!("line.vert"),
+        )),
+        fragment: Some(shaders.add(Shader::from_glsl(
+            ShaderStage::Fragment,
+            include_str!("line.frag"),
+        ))),
+    });
 
     // Disable backface culling (enable two sided rendering).
     p.primitive = PrimitiveState {
-        cull_mode: CullMode::None,
+        cull_mode: Some(Face::Back),
         ..Default::default()
     };
 
@@ -116,7 +130,8 @@ fn setup(
         depth_test: lines.depth_test,
     });
 
-    commands.spawn_bundle(MeshBundle {
+    commands
+        .spawn_bundle(MeshBundle {
             mesh: meshes.add(mesh),
             render_pipelines: pipes,
             transform: Transform::from_translation(Vec3::ZERO),
@@ -154,13 +169,24 @@ pub struct Line {
 }
 
 impl Line {
-    pub fn new(start: Vec3, end: Vec3, duration: f32, start_color: Color, end_color: Color) -> Self {
-        Self { start, end, color: [start_color, end_color], duration }
+    pub fn new(
+        start: Vec3,
+        end: Vec3,
+        duration: f32,
+        start_color: Color,
+        end_color: Color,
+    ) -> Self {
+        Self {
+            start,
+            end,
+            color: [start_color, end_color],
+            duration,
+        }
     }
 }
 
 /// Bevy resource providing facilities to draw lines.
-/// 
+///
 /// # Usage
 /// ```
 /// // Draws 3 horizontal lines, which disappear after 1 frame.
@@ -242,7 +268,14 @@ impl DebugLines {
     /// * `duration` - Duration (in seconds) that the line should show for -- a value of zero will show the line for 1 frame.
     /// * `start_color` - Line color
     /// * `end_color` - Line color
-    pub fn line_gradient(&mut self, start: Vec3, end: Vec3, duration: f32, start_color: Color, end_color: Color) {
+    pub fn line_gradient(
+        &mut self,
+        start: Vec3,
+        end: Vec3,
+        duration: f32,
+        start_color: Color,
+        end_color: Color,
+    ) {
         let line = Line::new(start, end, duration, start_color, end_color);
 
         // If we are at maximum capacity, we push the first line out.
@@ -267,7 +300,7 @@ fn draw_lines(
     // This has been removed due to needing to redraw every frame now, but the logic is reasonable and
     // may be re-added at some point.
     //if !lines.dirty {
-        //return;
+    //return;
     //}
     for line_handle in query.iter() {
         // This could probably be faster if we can simplify to a memcpy instead.
@@ -276,16 +309,20 @@ fn draw_lines(
             let all_lines = lines.lines.iter().chain(lines.user_lines.iter());
             for line in all_lines {
                 shader.points[i] = line.start.extend(0.0);
-                shader.points[i+1] = line.end.extend(0.0);
+                shader.points[i + 1] = line.end.extend(0.0);
                 shader.colors[i] = line.color[0].as_rgba_f32().into();
-                shader.colors[i+1] = line.color[1].as_rgba_f32().into();
+                shader.colors[i + 1] = line.color[1].as_rgba_f32().into();
 
                 i += 2;
             }
 
             let count = lines.lines.len() + lines.user_lines.len();
             let size = if count > MAX_LINES {
-                bevy::log::warn!("DebugLines: Maximum number of lines exceeded: line count: {}, max lines: {}", count, MAX_LINES);
+                bevy::log::warn!(
+                    "DebugLines: Maximum number of lines exceeded: line count: {}, max lines: {}",
+                    count,
+                    MAX_LINES
+                );
                 MAX_LINES
             } else {
                 count
