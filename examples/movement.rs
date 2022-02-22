@@ -8,7 +8,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin::default())
         .add_startup_system(setup.system())
-        .add_system_to_stage(CoreStage::Last, move_with_mouse.before("draw_lines"))
+        .add_system(move_with_mouse)
         .run();
 }
 

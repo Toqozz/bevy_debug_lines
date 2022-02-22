@@ -17,16 +17,10 @@ This plugin uses a shader and sends individual points to the GPU, which then mov
 Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
 ```toml
 [dependencies]
-bevy_prototype_debug_lines = "0.4.0"
+bevy_prototype_debug_lines = "0.6.0"
+// Or, for 3d:
+// bevy_prototype_debug_lines = { version = "0.6.0", features = ["3d"] }
 ```
-
-If you are using bevy_debug_lines for 3d rendering, you must add the `3d`
-feature like so:
-```toml
-[dependencies]
-bevy_prototype_debug_lines = { version = "0.4.0", features = ["3d"] }
-```
-
 
 Add the plugin in your `App::new()` phase:
 ```rust
@@ -55,8 +49,8 @@ fn some_system(
 }
 ```
 
-Some options, such as depth testing, can be changed by using the
-`DebugLinesPlugin::always_in_front()` method:
+Depth testing (drawing lines through geometry instead of always on top) can be changed using the
+`DebugLinesPlugin::with_depth_test()` method:
 
 ```rust
 use bevy::prelude::*;
@@ -65,7 +59,7 @@ use bevy_prototype_debug_lines::*;
 fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(DebugLinesPlugin::always_in_front())
+    .add_plugin(DebugLinesPlugin::with_depth_test(true))
 //  ...
     .run();
 }
@@ -74,7 +68,6 @@ fn main() {
 See [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/examples) for more complete usage examples.
 
 ## Troubleshooting
-
 ### Lines do not show up
 
 **Problem**: Lines do not show up on screen, even if I added the `DebugLinesPlugin` and
@@ -91,7 +84,7 @@ your game. Is it a 3d game? If so, you should add the
 look like this:
 
 ```toml
-bevy_prototype_debug_lines = { version = "0.4.0", features = ["3d"] }
+bevy_prototype_debug_lines = { version = "0.6.0", features = ["3d"] }
 ```
 
 
@@ -109,27 +102,19 @@ However, if you feel differently, let me know in [this](https://github.com/Toqoz
 
 This is technically a non-breaking change (i.e. your code will still compile) because `duration` was added which takes the same spot, but beware that your code still needs to be updated (probably just set old `thickness` values to `0`, if you don't care about duration stuff.).
 
-## Changes in `0.4.0`
-
-* Complete rewrite
-* Support bevy 0.6
-* Use a wgsl shader, which should improve web compatibility
-* The depth check is not supported through the `DebugLines.depth_check` field
-  anymore. You need to set it when initializing the plugin. By default depth
-  test is enabled but can be disabled with:
-  `.add_plugin(DebugLinesPlugin::always_in_front())`
-* `DebugLinesPlugin` now has a constructor, you should replace `.add_plugin(DebugLinesPlugin)`
-  in your code by `.add_plugin(DebugLinesPlugin::default())`.
-* Added the `3d` feature. Due to the changes in the way the plugin works, it is
-  now necessary to separate the 2d and 3d plugins. If you are using
-  `bevy_debug_lines` in a 3d game, please add the `features = ["3d"] ` line to
-  your `bevy_prototype_debug_lines` dependency.
+## Changes in `0.6.0`
+- Support Bevy 0.6.
+- Use a `.wgsl` shader, which should improve web compatibility.
+- The `DebugLines.depth_check` field has been removed in favor of `DebugLinesPlugin::with_depth_test()` -- see [depth_test](https://github.com/Toqozz/bevy_debug_lines/blob/master/examples/depth_test.rs) example.
+- When adding the plugin, we now need to use `DebugLinesPlugin::default()` instead of just `DebugLinesPlugin`.
+- Due to underlying changes in the bevy renderer, 3d and 2d have been split into separate features.  If you are using
+`bevy_debug_lines` in a 3d game, add the `features = ["3d"]` line to your `bevy_prototype_debug_lines` dependency.  Sorry!
 
 ## Bevy Version Support
 
 | bevy | bevy_prototype_debug_lines |
 | --- | --- |
-| 0.6 | 0.4 |
+| 0.6 | 0.6 |
 | 0.5 | 0.3 |
 | 0.4 | 0.2.1 |
 

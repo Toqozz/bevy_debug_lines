@@ -6,6 +6,10 @@ use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
     App::new()
+        .insert_resource(WindowDescriptor {
+            vsync: false,
+            ..Default::default()
+        })
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
