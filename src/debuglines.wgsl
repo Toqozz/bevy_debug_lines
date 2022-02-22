@@ -8,7 +8,7 @@
 
 struct Vertex {
     [[location(0)]] color: vec4<f32>;
-    [[location(1)]] place: vec3<f32>;
+    [[location(1)]] pos: vec3<f32>;
 };
 
 struct VertexOutput {
@@ -24,7 +24,7 @@ struct FragmentOutput {
 [[stage(vertex)]]
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
-    out.clip_position = view.view_proj * vec4<f32>(vertex.place, 1.0);
+    out.clip_position = view.view_proj * vec4<f32>(vertex.pos, 1.0);
     out.color = vertex.color;
 
     return out;
@@ -33,6 +33,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 [[stage(fragment)]]
 fn fragment(in: VertexOutput) -> FragmentOutput {
     var out: FragmentOutput;
+
 // This should be #ifdef DEPTH_TEST_ENABLED && LINES_3D, but the
 // preprocessor doesn't support that yet.
 // Luckily, DEPTH_TEST_ENABLED isn't set in 2d anyway.

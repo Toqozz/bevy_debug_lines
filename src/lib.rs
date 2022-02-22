@@ -1,14 +1,14 @@
 use bevy::{
-        prelude::*,
-        asset::{Assets, HandleUntyped},
-        pbr::{NotShadowCaster, NotShadowReceiver},
-        reflect::TypeUuid, render::render_resource::Shader,
-        render::{
-            mesh::{Mesh, VertexAttributeValues},
-            render_phase::AddRenderCommand,
-            render_resource::PrimitiveTopology
-        }
-    };
+    prelude::*,
+    asset::{Assets, HandleUntyped},
+    pbr::{NotShadowCaster, NotShadowReceiver},
+    reflect::TypeUuid,
+    render::{
+        render_resource::Shader,
+        mesh::{/*Indices,*/Mesh, VertexAttributeValues},
+        render_phase::AddRenderCommand, render_resource::PrimitiveTopology
+    }
+};
 
 mod render_dim;
 
@@ -143,6 +143,8 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             Mesh::ATTRIBUTE_COLOR,
             VertexAttributeValues::Float32x4(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
+        // https://github.com/Toqozz/bevy_debug_lines/issues/16
+        // mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
 
         cmds.spawn_bundle((
             dim::into_handle(meshes.add(mesh)),
@@ -180,6 +182,17 @@ fn update(
                 cbuffer.extend(new_content);
             }
         }
+
+        /* https://github.com/Toqozz/bevy_debug_lines/issues/16
+        if let Some(Indices::U16(indices)) = mesh.indices_mut() {
+            indices.clear();
+            if let Some(new_content) = lines.durations.chunks(_MAX_LINES_PER_MESH).nth(debug_lines_idx.0) {
+                indices.extend(
+                    new_content.iter().enumerate().map(|(i, _)| i as u16).flat_map(|i| [i * 2, i*2 + 1])
+                );
+            }
+        }
+        */ 
     }
 
     // Processes stuff like getting rid of expired lines and stuff.
