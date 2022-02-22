@@ -84,7 +84,7 @@ your game. Is it a 3d game? If so, you should add the
 look like this:
 
 ```toml
-bevy_prototype_debug_lines = { version = "0.6.0", features = ["3d"] }
+bevy_prototype_debug_lines = { version = "0.6", features = ["3d"] }
 ```
 
 
