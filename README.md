@@ -17,19 +17,21 @@ This plugin uses a shader and sends individual points to the GPU, which then mov
 Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
 ```toml
 [dependencies]
-bevy_prototype_debug_lines = "0.3"
+bevy_prototype_debug_lines = "0.6.0"
+// Or, for 3d:
+// bevy_prototype_debug_lines = { version = "0.6.0", features = ["3d"] }
 ```
 
-Add the plugin in your `App::build()` phase:
+Add the plugin in your `App::new()` phase:
 ```rust
 use bevy::prelude::*;
 use bevy_prototype_debug_lines::*;
 
 fn main() {
-    App::build()
+    App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin)
-        ...
+        .add_plugin(DebugLinesPlugin::default())
+//      ...
         .run();
 }
 ```
@@ -37,8 +39,8 @@ fn main() {
 Draw a line in whatever system you have using the `DebugLines` resource:
 ```rust
 fn some_system(
-    ...
-    mut lines: ResMut<DebugLines>
+//  ...
+    mut lines: ResMut<DebugLines>,
 ) {
     let start = Vec3::splat(-1.0);
     let end = Vec3::splat(1.0);
@@ -47,23 +49,44 @@ fn some_system(
 }
 ```
 
-Some options, such as depth testing, can be changed by inserting the `DebugLines` resource yourself:
+Depth testing (drawing lines through geometry instead of always on top) can be changed using the
+`DebugLinesPlugin::with_depth_test()` method:
 
 ```rust
 use bevy::prelude::*;
 use bevy_prototype_debug_lines::*;
 
 fn main() {
-    App::build()
+    App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(DebugLinesPlugin)
-    .insert_resource(DebugLines { depth_test: true, ..Default::default() })
-    ...
+    .add_plugin(DebugLinesPlugin::with_depth_test(true))
+//  ...
     .run();
 }
 ```
 
 See [the examples](https://github.com/Toqozz/bevy_debug_lines/tree/master/examples) for more complete usage examples.
+
+## Troubleshooting
+### Lines do not show up
+
+**Problem**: Lines do not show up on screen, even if I added the `DebugLinesPlugin` and
+used `DebugLines::lines`
+
+**Solution**: Check the dimension feature of `bevy_debug_lines`, when running your game,
+there should be a log message looking like:
+```
+INFO bevy_prototype_debug_lines: Loaded 2d debug lines plugin.
+```
+Pay attention to **`Loaded 2d debug`** this should match what you are using in
+your game. Is it a 3d game? If so, you should add the
+`bevy_prototype_debug_lines/3d` feature flag to your `Cargo.toml`. It should
+look like this:
+
+```toml
+bevy_prototype_debug_lines = { version = "0.6.0", features = ["3d"] }
+```
+
 
 ## Running Examples
 You can run the examples like so:
@@ -79,11 +102,19 @@ However, if you feel differently, let me know in [this](https://github.com/Toqoz
 
 This is technically a non-breaking change (i.e. your code will still compile) because `duration` was added which takes the same spot, but beware that your code still needs to be updated (probably just set old `thickness` values to `0`, if you don't care about duration stuff.).
 
+## Changes in `0.6.0`
+- Support Bevy 0.6.
+- Use a `.wgsl` shader, which should improve web compatibility.
+- The `DebugLines.depth_check` field has been removed in favor of `DebugLinesPlugin::with_depth_test()` -- see [depth_test](https://github.com/Toqozz/bevy_debug_lines/blob/master/examples/depth_test.rs) example.
+- When adding the plugin, we now need to use `DebugLinesPlugin::default()` instead of just `DebugLinesPlugin`.
+- Due to underlying changes in the bevy renderer, 3d and 2d have been split into separate features.  If you are using
+`bevy_debug_lines` in a 3d game, add the `features = ["3d"]` line to your `bevy_prototype_debug_lines` dependency.  Sorry!
+
 ## Bevy Version Support
 
 | bevy | bevy_prototype_debug_lines |
 | --- | --- |
-| main | `bevy-main` branch (not guaranteed maintained) |
+| 0.6 | 0.6 |
 | 0.5 | 0.3 |
 | 0.4 | 0.2.1 |
 

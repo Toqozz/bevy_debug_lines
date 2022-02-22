@@ -1,30 +1,33 @@
-use bevy::prelude::*;
-use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-use bevy::wgpu::diagnostic::WgpuResourceDiagnosticsPlugin;
+use bevy::diagnostic::LogDiagnosticsPlugin;
+use bevy::prelude::*;
 
-use bevy_prototype_debug_lines::{ DebugLinesPlugin, DebugLines };
+use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
-    App::build()
+    App::new()
+        .insert_resource(WindowDescriptor {
+            vsync: false,
+            ..Default::default()
+        })
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin)
+        .add_plugin(DebugLinesPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(WgpuResourceDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin { wait_duration: bevy::utils::Duration::new(5, 0), ..Default::default() })
-        .add_startup_system(setup.system())
-        .add_system(demo_circle.system())
-        //.add_system(demo_block.system())
+        .add_plugin(LogDiagnosticsPlugin {
+            wait_duration: bevy::utils::Duration::new(5, 0),
+            ..Default::default()
+        })
+        .add_startup_system(setup)
+        .add_system(demo_circle)
+        //.add_system(demo_block)
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-) {
+fn setup(mut commands: Commands) {
     commands.spawn_bundle(PerspectiveCameraBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
-            ..Default::default()
-        });
+        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
+        ..Default::default()
+    });
 }
 
 fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
@@ -32,7 +35,7 @@ fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
     use std::f32::consts::PI;
 
     const RADIUS: f32 = 1.5;
-    const THICKNESS: f32 = 0.001;
+    const DURATION: f32 = 0.0;
 
     let seconds = 0.5 * time.seconds_since_startup() as f32;
 
@@ -60,14 +63,14 @@ fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
         let start_color = Color::rgba(start.x, start.y, 0.5, start.z.max(0.5));
         let end_color = Color::rgba(end.x, end.y, 0.5, end.z.max(0.5));
 
-        lines.line_gradient(start, end, THICKNESS, start_color, end_color);
+        lines.line_gradient(start, end, DURATION, start_color, end_color);
     }
 }
 
-fn _demo_block(mut lines: ResMut<DebugLines>) {
+fn _demo_block(mut lines: DebugLines) {
     use bevy_prototype_debug_lines::MAX_LINES;
 
-    const THICKNESS: f32 = 0.01;
+    const DURATION: f32 = 10.0;
     const X: f32 = 2.0;
     const Y: f32 = 1.0;
 
@@ -80,6 +83,6 @@ fn _demo_block(mut lines: ResMut<DebugLines>) {
         let start_color = Color::rgba(start.x, start.y, 0.5, 1.0);
         let end_color = Color::rgba(end.x, end.y, 0.5, 1.0);
 
-        lines.line_gradient(start, end, THICKNESS, start_color, end_color);
+        lines.line_gradient(start, end, DURATION, start_color, end_color);
     }
 }

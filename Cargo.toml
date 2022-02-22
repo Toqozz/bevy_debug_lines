@@ -1,26 +1,33 @@
 [package]
-name = "bevy_prototype_debug_lines"
-version = "0.3.4"
 authors = ["Michael Palmos <toqoz@hotmail.com>"]
-edition = "2018"
-license = "MIT"
-description = "A prototype plugin providing a simple line drawing API for bevy."
-homepage = "https://github.com/Toqozz/bevy_debug_lines"
-repository = "https://github.com/Toqozz/bevy_debug_lines"
-keywords = ["debug", "line", "graphics", "bevy", "drawing"]
 categories = ["game-engines", "rendering", "game-development"]
+description = "A prototype plugin providing a simple line drawing API for bevy."
+edition = "2021"
+homepage = "https://github.com/Toqozz/bevy_debug_lines"
+keywords = ["debug", "line", "graphics", "bevy", "drawing"]
+license = "MIT"
+name = "bevy_prototype_debug_lines"
+repository = "https://github.com/Toqozz/bevy_debug_lines"
+version = "0.6.0"
 
-exclude = [
-    "demo.gif",
-    "demo_2.png",
-    "demo_2.webm",
-]
+exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 
 [dependencies]
-bevy = { version = "0.5", default-features = false, features = ["render"] }
+bevy = { version = "0.6", default-features = false, features = [ "render" ] }
 
 [features]
-example_deps = ["bevy/bevy_wgpu", "bevy/bevy_winit", "bevy/bevy_gltf", "bevy/x11"]
+example_deps_2d = [
+    "bevy/bevy_winit",
+    "bevy/bevy_gltf",
+    "bevy/x11",
+]
+example_deps = [
+    "bevy/bevy_winit",
+    "bevy/bevy_gltf",
+    "bevy/x11",
+    "3d",
+]
+3d = []
 
 [[example]]
 name = "3d"
@@ -28,14 +35,10 @@ required-features = ["example_deps"]
 
 [[example]]
 name = "2d"
-required-features = ["example_deps"]
+required-features = ["example_deps_2d"]
 
 [[example]]
 name = "bench"
-required-features = ["example_deps"]
-
-[[example]]
-name = "user_lines"
 required-features = ["example_deps"]
 
 [[example]]

@@ -1,18 +1,53 @@
-//! # bevy_debug_lines
-//! 
-//! A plugin for drawing performant debug lines without a lot of hassle.
-
-#![allow(dead_code)]
-
-use bevy::prelude::*;
-use bevy::render::{
-    mesh::VertexAttributeValues,
-    pipeline::{ PrimitiveTopology, PipelineDescriptor, RenderPipeline, PrimitiveState, CullMode  },
-    shader::{ asset_shader_defs_system, ShaderStages, ShaderStage, ShaderDefs },
-    render_graph::{ AssetRenderResourcesNode, RenderGraph, base },
-    renderer::RenderResources,
+use bevy::{
+    asset::{Assets, HandleUntyped},
+    prelude::*,
+    reflect::TypeUuid,
+    render::render_resource::Shader,
+    render::{
+        mesh::{Mesh, VertexAttributeValues},
+        render_phase::AddRenderCommand,
+        render_resource::PrimitiveTopology,
+    },
 };
-use bevy::reflect::TypeUuid;
+
+mod render_dim;
+
+// This module exists to "isolate" the `#[cfg]` attributes to this part of the
+// code. Otherwise, we would pollute the code with a lot of feature
+// gates-specific code.
+#[cfg(feature = "3d")]
+mod dim {
+    use bevy::{asset::Handle, render::mesh::Mesh};
+    pub(crate) use bevy::core_pipeline::Opaque3d as Phase;
+    pub(crate) use crate::render_dim::r3d::{queue, DebugLinePipeline, DrawDebugLines};
+
+    pub(crate) type MeshHandle = Handle<Mesh>;
+    pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> { from }
+    pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle { from }
+    pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
+    pub(crate) const DIMMENSION: &str = "3d";
+}
+#[cfg(not(feature = "3d"))]
+mod dim {
+    use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
+    pub(crate) use bevy::core_pipeline::Transparent2d as Phase;
+    pub(crate) use crate::render_dim::r2d::{queue, DebugLinePipeline, DrawDebugLines};
+
+    pub(crate) type MeshHandle = Mesh2dHandle;
+    pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> { &from.0 }
+    pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle { Mesh2dHandle(from) }
+    pub(crate) const SHADER_FILE: &str = include_str!("debuglines2d.wgsl");
+    pub(crate) const DIMMENSION: &str = "2d";
+}
+
+// See debuglines.wgsl for explanation on 2 shaders.
+//pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
+pub(crate) const DEBUG_LINES_SHADER_HANDLE: HandleUntyped =
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 17477439189930443325);
+
+pub(crate) struct DebugLinesConfig {
+    depth_test: bool,
+}
 
 /// Bevy plugin, for initializing stuff.
 ///
@@ -22,147 +57,154 @@ use bevy::reflect::TypeUuid;
 /// use bevy::prelude::*;
 /// use bevy_prototype_debug_lines::*;
 ///
-/// fn main() {
-///     App::build()
+/// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugin(DebugLinesPlugin)
-///     ...
+///     .add_plugin(DebugLinesPlugin::default())
 ///     .run();
-/// }
 /// ```
 ///
-/// Some options can be changed by inserting your own `DebugLines` resource:
-///
+/// Alternatively, you can initialize the plugin without depth testing, so that
+/// debug lines are always visible, even when behind other objects. For this,
+/// you need to use the [`DebugLinesPlugin::always_on_top`] constructor.
 /// ```
 /// use bevy::prelude::*;
 /// use bevy_prototype_debug_lines::*;
 ///
-/// fn main() {
-///     App::build()
+/// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugin(DebugLinesPlugin)
-///     .insert_resource(DebugLines { depth_test: true, ..Default::default() })
-///     ...
+///     .add_plugin(DebugLinesPlugin::with_depth_test(true))
 ///     .run();
-/// }
 /// ```
-pub struct DebugLinesPlugin;
-impl Plugin for DebugLinesPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app
-            .add_asset::<LineShader>()
-            .init_resource::<DebugLines>()
-            .add_startup_system(setup.system())
-            .add_system_to_stage(CoreStage::PostUpdate, draw_lines.system().label("draw_lines"))
-            .add_system_to_stage(CoreStage::PostUpdate, asset_shader_defs_system::<LineShader>.system().before("draw_lines"));
+#[derive(Debug, Default, Clone)]
+pub struct DebugLinesPlugin {
+    depth_test: bool,
+}
+
+impl DebugLinesPlugin {
+    /// Controls whether debug lines should be drawn with depth testing enabled
+    /// or disabled.
+    ///
+    /// # Arguments
+    /// 
+    /// * `val` - True if lines should intersect with other geometry, or false
+    ///   if lines should always draw on top be drawn on top (the default).
+    pub fn with_depth_test(val: bool) -> Self {
+        Self {
+            depth_test: val,
+        }
     }
 }
 
-/// Maximum number of unique lines to draw at once.
-pub const MAX_LINES: usize = 128000;
-/// Maximum number of points.
-pub const MAX_POINTS: usize = MAX_LINES * 2;
+impl Plugin for DebugLinesPlugin {
+    fn build(&self, app: &mut App) {
+        use bevy::render::{render_resource::SpecializedPipelines, RenderApp, RenderStage};
+        let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
+        shaders.set_untracked(
+            DEBUG_LINES_SHADER_HANDLE,
+            Shader::from_wgsl(dim::SHADER_FILE),
+        );
+        app.init_resource::<DebugLines>();
+        app.add_startup_system(setup)
+           .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
+        app.sub_app_mut(RenderApp)
+            .add_render_command::<dim::Phase, dim::DrawDebugLines>()
+            .insert_resource(DebugLinesConfig { depth_test: self.depth_test})
+            .init_resource::<dim::DebugLinePipeline>()
+            .init_resource::<SpecializedPipelines<dim::DebugLinePipeline>>()
+            .add_system_to_stage(RenderStage::Extract, extract)
+            .add_system_to_stage(RenderStage::Queue, dim::queue);
 
-fn create_mesh() -> Mesh {
-    let mut mesh = Mesh::new(PrimitiveTopology::LineList);
-    let positions = vec![[0.0, 0.0, 0.0]; MAX_LINES * 2];
-    mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, VertexAttributeValues::Float3(positions.into()));
-
-    mesh
+        info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
+    }
 }
 
-fn setup(
-    lines: Res<DebugLines>,
-    mut commands: Commands,
-    mut pipelines: ResMut<Assets<PipelineDescriptor>>,
-    mut shaders: ResMut<Assets<Shader>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<LineShader>>,
-    mut render_graph: ResMut<RenderGraph>,
-) {
-    let mut p = 
-        PipelineDescriptor::default_config(
-            ShaderStages {
-                vertex: shaders.add(Shader::from_glsl(ShaderStage::Vertex, include_str!("line.vert"))),
-                fragment: Some(shaders.add(Shader::from_glsl(ShaderStage::Fragment, include_str!("line.frag")))),
-            }
+
+
+// Number of meshes to separate line buffers into.
+// We don't really do culling currently but this is a gateway to that.
+const MESH_COUNT: usize = 4;
+// Maximum number of points for each individual mesh.
+const MAX_POINTS_PER_MESH: usize = 2_usize.pow(16);
+const _MAX_LINES_PER_MESH: usize = MAX_POINTS_PER_MESH / 2;
+/// Maximum number of points.
+pub const MAX_POINTS: usize = MAX_POINTS_PER_MESH * MESH_COUNT;
+/// Maximum number of unique lines to draw at once.
+pub const MAX_LINES: usize = MAX_POINTS / 2;
+
+fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+    // Spawn a bunch of meshes to use for lines.
+    for i in 0..MESH_COUNT {
+        // Create a new mesh with the number of vertices we need.
+        let mut mesh = Mesh::new(PrimitiveTopology::LineList);
+        mesh.set_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            VertexAttributeValues::Float32x3(Vec::with_capacity(MAX_POINTS_PER_MESH)),
+        );
+        mesh.set_attribute(
+            Mesh::ATTRIBUTE_COLOR,
+            VertexAttributeValues::Float32x4(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
 
-    // Disable backface culling (enable two sided rendering).
-    p.primitive = PrimitiveState {
-        cull_mode: CullMode::None,
-        ..Default::default()
-    };
-
-    // Create new shader pipeline.
-    let pipeline_handle = pipelines.add(p);
-
-    render_graph.add_system_node(
-        "line_shader",
-        AssetRenderResourcesNode::<LineShader>::new(false),
-    );
-
-    render_graph
-        .add_node_edge("line_shader", base::node::MAIN_PASS)
-        .unwrap();
-
-    let pipes = RenderPipelines::from_pipelines(vec![RenderPipeline::new(pipeline_handle)]);
-
-    let mesh = create_mesh();
-    let shader = materials.add(LineShader {
-        num_lines: 0,
-        points: vec![Vec4::ZERO; MAX_POINTS],
-        colors: vec![Color::WHITE.into(); MAX_POINTS],
-        depth_test: lines.depth_test,
-    });
-
-    commands.spawn_bundle(MeshBundle {
-            mesh: meshes.add(mesh),
-            render_pipelines: pipes,
-            transform: Transform::from_translation(Vec3::ZERO),
-            ..Default::default()
-        })
-        .insert(shader);
-
-    info!("Loaded debug lines plugin.");
-}
-
-/// Shader data, passed to the GPU.
-#[derive(RenderResources, Default, ShaderDefs, TypeUuid)]
-#[uuid = "f093e7c5-634c-45f8-a2af-7fcd0245f259"]
-pub struct LineShader {
-    pub num_lines: u32, // max number of lines: see: MAX_LINES.
-    // I don't love having 2 buffers here.  It would be cleaner if we can do a custom line structure.
-    // We should also consider the memory imprint here.  We should maybe instead allow a predefined
-    // set of colors which would dramatically reduce that.
-    #[render_resources(buffer)]
-    pub points: Vec<Vec4>,
-    #[render_resources(buffer)]
-    pub colors: Vec<Vec4>,
-
-    #[render_resources(ignore)]
-    #[shader_def]
-    pub depth_test: bool,
-}
-
-/// A single line, usually initialized by helper methods on `DebugLines` instead of directly.
-pub struct Line {
-    start: Vec3,
-    end: Vec3,
-    color: [Color; 2],
-    duration: f32,
-}
-
-impl Line {
-    pub fn new(start: Vec3, end: Vec3, duration: f32, start_color: Color, end_color: Color) -> Self {
-        Self { start, end, color: [start_color, end_color], duration }
+        cmds.spawn_bundle((
+            dim::into_handle(meshes.add(mesh)),
+            Transform::default(),
+            GlobalTransform::default(),
+            Visibility::default(),
+            ComputedVisibility::default(),
+            DebugLinesMesh(i),
+        ));
     }
 }
 
+fn update(
+    debug_line_meshes: Query<(&dim::MeshHandle, &DebugLinesMesh)>,
+    time: Res<Time>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut lines: ResMut<DebugLines>,
+) {
+    // For each debug line mesh, fill its buffers with the relevant positions/colors chunks.
+    for (mesh_handle, debug_lines_idx) in debug_line_meshes.iter() {
+        let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
+        use VertexAttributeValues::{Float32x3, Float32x4};
+        if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+            vbuffer.clear();
+            if let Some(new_content) = lines.positions.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
+                vbuffer.extend(new_content);
+            }
+        }
+
+        if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
+            cbuffer.clear();
+            if let Some(new_content) = lines.colors.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
+                cbuffer.extend(new_content);
+            }
+        }
+    }
+
+    // Processes stuff like getting rid of expired lines and stuff.
+    lines.update(time.delta_seconds());
+}
+
+/// Move the DebugLinesMesh marker Component to the render context.
+fn extract(mut commands: Commands, query: Query<Entity, With<DebugLinesMesh>>) {
+    for entity in query.iter() {
+        commands.get_or_spawn(entity).insert(RenderDebugLinesMesh);
+    }
+}
+
+#[derive(Component)]
+struct DebugLinesMesh(usize);
+
+#[derive(Component)]
+struct RenderDebugLinesMesh;
+
 /// Bevy resource providing facilities to draw lines.
-/// 
+///
 /// # Usage
 /// ```
+/// use bevy::prelude::*;
+/// use bevy_prototype_debug_lines::*;
+///
 /// // Draws 3 horizontal lines, which disappear after 1 frame.
 /// fn some_system(mut lines: ResMut<DebugLines>) {
 ///     lines.line(Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0), 0.0);
@@ -180,33 +222,11 @@ impl Line {
 ///     );
 /// }
 /// ```
-///
-/// # Properties
-///
-/// * `lines` - A `Vec` of `Line`s that is **cleared by the system every frame**.
-/// Normally you don't want to touch this, and it may go private in future releases.
-/// * `user_lines` - A Vec of `Line`s that is **not cleared by the system every frame**.
-/// Use this for inserting persistent lines and generally having control over how lines are collected.
-/// * `depth_test` - Enable/disable depth testing, i.e. whether lines should be drawn behind other
-/// geometry.
+#[derive(Default)]
 pub struct DebugLines {
-    pub lines: Vec<Line>,
-    pub user_lines: Vec<Line>,
-
-    pub depth_test: bool,
-    //pub dirty: bool,
-}
-
-impl Default for DebugLines {
-    fn default() -> Self {
-        Self {
-            lines: Vec::new(),
-            user_lines: Vec::new(),
-
-            depth_test: false,
-            //dirty: false,
-        }
-    }
+    pub positions: Vec<[f32; 3]>,
+    pub colors: Vec<[f32; 4]>,
+    pub durations: Vec<f32>,
 }
 
 impl DebugLines {
@@ -216,7 +236,8 @@ impl DebugLines {
     ///
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
-    /// * `duration` - Duration (in seconds) that the line should show for -- a value of zero will show the line for 1 frame.
+    /// * `duration` - Duration (in seconds) that the line should show for -- a value of
+    ///   zero will show the line for 1 frame.
     pub fn line(&mut self, start: Vec3, end: Vec3, duration: f32) {
         self.line_colored(start, end, duration, Color::WHITE);
     }
@@ -227,7 +248,8 @@ impl DebugLines {
     ///
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
-    /// * `duration` - Duration (in seconds) that the line should show for -- a value of zero will show the line for 1 frame.
+    /// * `duration` - Duration (in seconds) that the line should show for -- a value of
+    ///   zero will show the line for 1 frame.
     /// * `color` - Line color
     pub fn line_colored(&mut self, start: Vec3, end: Vec3, duration: f32, color: Color) {
         self.line_gradient(start, end, duration, color, color);
@@ -239,73 +261,65 @@ impl DebugLines {
     ///
     /// * `start` - The start of the line in world space
     /// * `end` - The end of the line in world space
-    /// * `duration` - Duration (in seconds) that the line should show for -- a value of zero will show the line for 1 frame.
+    /// * `duration` - Duration (in seconds) that the line should show for -- a value of
+    ///   zero will show the line for 1 frame.
     /// * `start_color` - Line color
     /// * `end_color` - Line color
-    pub fn line_gradient(&mut self, start: Vec3, end: Vec3, duration: f32, start_color: Color, end_color: Color) {
-        let line = Line::new(start, end, duration, start_color, end_color);
-
-        // If we are at maximum capacity, we push the first line out.
-        if self.lines.len() == MAX_LINES {
-            //bevy::log::warn!("Hit max lines, so replaced most recent line.");
-            self.lines.pop();
+    pub fn line_gradient(
+        &mut self,
+        start: Vec3,
+        end: Vec3,
+        duration: f32,
+        start_color: Color,
+        end_color: Color,
+    ) {
+        if self.positions.len() >= MAX_POINTS {
+            warn!("Tried to add a new line when existing number of lines was already at maximum, ignoring.");
+            return;
         }
 
-        self.lines.push(line);
+        self.positions.push(start.into());
+        self.positions.push(end.into());
+        self.colors.push(start_color.into());
+        self.colors.push(end_color.into());
+        self.durations.push(duration);
     }
-}
 
-fn draw_lines(
-    mut assets: ResMut<Assets<LineShader>>,
-    mut lines: ResMut<DebugLines>,
-    time: Res<Time>,
-    query: Query<&Handle<LineShader>>,
-) {
-    // One line changing makes us update all lines.
-    // We can probably resolve this is it becomes a problem -- consider creating a number of "Line" entities to
-    // split up the processing.
-    // This has been removed due to needing to redraw every frame now, but the logic is reasonable and
-    // may be re-added at some point.
-    //if !lines.dirty {
-        //return;
-    //}
-    for line_handle in query.iter() {
-        // This could probably be faster if we can simplify to a memcpy instead.
-        if let Some(shader) = assets.get_mut(line_handle) {
-            let mut i = 0;
-            let all_lines = lines.lines.iter().chain(lines.user_lines.iter());
-            for line in all_lines {
-                shader.points[i] = line.start.extend(0.0);
-                shader.points[i+1] = line.end.extend(0.0);
-                shader.colors[i] = line.color[0].as_rgba_f32().into();
-                shader.colors[i+1] = line.color[1].as_rgba_f32().into();
+    // Returns the indices of the start and end positions of the nth line.
+    // The indices can also be used to access color data.
+    fn nth(&self, idx: usize) -> (usize, usize) {
+        let i = idx * 2;
+        (i, i+1)
+    }
 
-                i += 2;
-            }
-
-            let count = lines.lines.len() + lines.user_lines.len();
-            let size = if count > MAX_LINES {
-                bevy::log::warn!("DebugLines: Maximum number of lines exceeded: line count: {}, max lines: {}", count, MAX_LINES);
-                MAX_LINES
+    // Prepare [`ImmediateLinesStorage`] and [`RetainedLinesStorage`] for next
+    // frame.
+    // This clears the immediate mod buffers and tells the retained mode
+    // buffers to recompute expired lines list.
+    fn update(&mut self, dt: f32) {
+        // TODO: an actual line counter wouldn't hurt.
+        let mut i = 0;
+        let mut len = self.durations.len();
+        while i != len {
+            self.durations[i] -= dt;
+            // <= instead of < is fine here because this is always called AFTER sending the
+            // data to the mesh, so we're guaranteed at least a frame here.
+            if self.durations[i] <= 0.0 {
+                let (cur_s, cur_e) = self.nth(i);
+                let (last_s, last_e) = self.nth(len-1);
+                self.positions.swap(cur_s, last_s);
+                self.positions.swap(cur_e, last_e);
+                self.colors.swap(cur_s, last_s);
+                self.colors.swap(cur_e, last_e);
+                self.durations.swap(i, len-1);
+                len -= 1;
             } else {
-                count
-            };
-
-            shader.num_lines = size as u32; // Minimum size to send to shader is 4 bytes.
+                i += 1;
+            }
         }
-    }
 
-    let mut i = 0;
-    let mut len = lines.lines.len();
-    while i != len {
-        lines.lines[i].duration -= time.delta_seconds();
-        if lines.lines[i].duration < 0.0 {
-            lines.lines.swap(i, len - 1);
-            len -= 1;
-        } else {
-            i += 1;
-        }
+        self.positions.truncate(len * 2);
+        self.colors.truncate(len * 2);
+        self.durations.truncate(len);
     }
-
-    lines.lines.truncate(len);
 }
