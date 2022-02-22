@@ -1,14 +1,14 @@
 use bevy::{
-    asset::{Assets, HandleUntyped},
-    prelude::*,
-    reflect::TypeUuid,
-    render::render_resource::Shader,
-    render::{
-        mesh::{Mesh, VertexAttributeValues},
-        render_phase::AddRenderCommand,
-        render_resource::PrimitiveTopology,
-    },
-};
+        prelude::*,
+        asset::{Assets, HandleUntyped},
+        pbr::{NotShadowCaster, NotShadowReceiver},
+        reflect::TypeUuid, render::render_resource::Shader,
+        render::{
+            mesh::{Mesh, VertexAttributeValues},
+            render_phase::AddRenderCommand,
+            render_resource::PrimitiveTopology
+        }
+    };
 
 mod render_dim;
 
@@ -146,6 +146,8 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
         cmds.spawn_bundle((
             dim::into_handle(meshes.add(mesh)),
+            NotShadowCaster,
+            NotShadowReceiver,
             Transform::default(),
             GlobalTransform::default(),
             Visibility::default(),
