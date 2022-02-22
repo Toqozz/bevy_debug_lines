@@ -63,9 +63,8 @@ pub(crate) struct DebugLinesConfig {
 ///     .run();
 /// ```
 ///
-/// Alternatively, you can initialize the plugin without depth testing, so that
-/// debug lines are always visible, even when behind other objects. For this,
-/// you need to use the [`DebugLinesPlugin::always_on_top`] constructor.
+/// Alternatively, you can initialize the plugin with depth testing, so that
+/// debug lines cut through geometry. To do this, use [`DebugLinesPlugin::with_depth_test(true)`].
 /// ```
 /// use bevy::prelude::*;
 /// use bevy_prototype_debug_lines::*;
