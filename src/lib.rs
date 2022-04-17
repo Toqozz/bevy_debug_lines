@@ -96,7 +96,7 @@ impl DebugLinesPlugin {
 
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
-        use bevy::render::{render_resource::SpecializedPipelines, RenderApp, RenderStage};
+        use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderStage};
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         shaders.set_untracked(
             DEBUG_LINES_SHADER_HANDLE,
@@ -109,7 +109,7 @@ impl Plugin for DebugLinesPlugin {
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
             .insert_resource(DebugLinesConfig { depth_test: self.depth_test})
             .init_resource::<dim::DebugLinePipeline>()
-            .init_resource::<SpecializedPipelines<dim::DebugLinePipeline>>()
+            .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
             .add_system_to_stage(RenderStage::Extract, extract)
             .add_system_to_stage(RenderStage::Queue, dim::queue);
 
@@ -135,11 +135,11 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     for i in 0..MESH_COUNT {
         // Create a new mesh with the number of vertices we need.
         let mut mesh = Mesh::new(PrimitiveTopology::LineList);
-        mesh.set_attribute(
+        mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             VertexAttributeValues::Float32x3(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
-        mesh.set_attribute(
+        mesh.insert_attribute(
             Mesh::ATTRIBUTE_COLOR,
             VertexAttributeValues::Float32x4(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
