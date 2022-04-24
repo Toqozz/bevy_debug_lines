@@ -96,7 +96,7 @@ impl DebugLinesPlugin {
 
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
-        use bevy::render::{render_resource::SpecializedPipelines, RenderApp, RenderStage};
+        use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderStage};
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         shaders.set_untracked(
             DEBUG_LINES_SHADER_HANDLE,
@@ -109,7 +109,7 @@ impl Plugin for DebugLinesPlugin {
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
             .insert_resource(DebugLinesConfig { depth_test: self.depth_test})
             .init_resource::<dim::DebugLinePipeline>()
-            .init_resource::<SpecializedPipelines<dim::DebugLinePipeline>>()
+            .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
             .add_system_to_stage(RenderStage::Extract, extract)
             .add_system_to_stage(RenderStage::Queue, dim::queue);
 
@@ -135,16 +135,16 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     for i in 0..MESH_COUNT {
         // Create a new mesh with the number of vertices we need.
         let mut mesh = Mesh::new(PrimitiveTopology::LineList);
-        mesh.set_attribute(
+        mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             VertexAttributeValues::Float32x3(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
-        mesh.set_attribute(
+        mesh.insert_attribute(
             Mesh::ATTRIBUTE_COLOR,
-            VertexAttributeValues::Float32x4(Vec::with_capacity(MAX_POINTS_PER_MESH)),
+            VertexAttributeValues::Uint32(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
         // https://github.com/Toqozz/bevy_debug_lines/issues/16
-        // mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
+        //mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
 
         cmds.spawn_bundle((
             dim::into_handle(meshes.add(mesh)),
@@ -168,7 +168,7 @@ fn update(
     // For each debug line mesh, fill its buffers with the relevant positions/colors chunks.
     for (mesh_handle, debug_lines_idx) in debug_line_meshes.iter() {
         let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
-        use VertexAttributeValues::{Float32x3, Float32x4};
+        use VertexAttributeValues::{Float32x3, Float32x4, Uint32};
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
             if let Some(new_content) = lines.positions.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
@@ -176,14 +176,15 @@ fn update(
             }
         }
 
-        if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
+        if let Some(Uint32(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
             cbuffer.clear();
             if let Some(new_content) = lines.colors.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
                 cbuffer.extend(new_content);
             }
         }
 
-        /* https://github.com/Toqozz/bevy_debug_lines/issues/16
+        /*
+        // https://github.com/Toqozz/bevy_debug_lines/issues/16
         if let Some(Indices::U16(indices)) = mesh.indices_mut() {
             indices.clear();
             if let Some(new_content) = lines.durations.chunks(_MAX_LINES_PER_MESH).nth(debug_lines_idx.0) {
@@ -239,7 +240,8 @@ struct RenderDebugLinesMesh;
 #[derive(Default)]
 pub struct DebugLines {
     pub positions: Vec<[f32; 3]>,
-    pub colors: Vec<[f32; 4]>,
+    //pub colors: Vec<[f32; 4]>,
+    pub colors: Vec<u32>,
     pub durations: Vec<f32>,
 }
 
@@ -294,8 +296,10 @@ impl DebugLines {
 
         self.positions.push(start.into());
         self.positions.push(end.into());
-        self.colors.push(start_color.into());
-        self.colors.push(end_color.into());
+        //self.colors.push(start_color.into());
+        //self.colors.push(end_color.into());
+        self.colors.push(start_color.as_rgba_u32());
+        self.colors.push(end_color.as_rgba_u32());
         self.durations.push(duration);
     }
 

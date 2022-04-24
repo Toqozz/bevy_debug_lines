@@ -1,23 +1,20 @@
 pub mod r3d {
-    use bevy::{
-        core_pipeline::Opaque3d,
-        pbr::{
+    use bevy::{core_pipeline::Opaque3d, pbr::{
             DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup,
             SetMeshViewBindGroup,
-        },
-        prelude::*,
-        render::{
+        }, prelude::*, render::{
+            mesh::MeshVertexBufferLayout,
+            render_asset::RenderAssets,
             render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
             render_resource::{
-                PrimitiveTopology, RenderPipelineCache, RenderPipelineDescriptor, SpecializedPipeline,
-                SpecializedPipelines, VertexAttribute, VertexBufferLayout, VertexFormat,
-                VertexStepMode,
+                PipelineCache, PrimitiveTopology, RenderPipelineDescriptor,
+                SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
+                VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode,
             },
             view::{ExtractedView, Msaa},
-        },
-    };
+        }, utils::Hashed};
 
-    use crate::{RenderDebugLinesMesh, DebugLinesConfig, DEBUG_LINES_SHADER_HANDLE};
+    use crate::{DebugLinesConfig, RenderDebugLinesMesh, DEBUG_LINES_SHADER_HANDLE};
 
     pub(crate) struct DebugLinePipeline {
         mesh_pipeline: MeshPipeline,
@@ -35,11 +32,15 @@ pub mod r3d {
         }
     }
 
-    impl SpecializedPipeline for DebugLinePipeline {
+    impl SpecializedMeshPipeline for DebugLinePipeline {
         type Key = (bool, MeshPipelineKey);
 
-        fn specialize(&self, (depth_test, key): Self::Key) -> RenderPipelineDescriptor {
-            use VertexFormat::{Float32x3, Float32x4};
+        fn specialize(
+            &self,
+            (depth_test, key): Self::Key,
+            layout: &MeshVertexBufferLayout,
+        ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
+            //use VertexFormat::{Float32x3, Float32x4};
 
             let mut shader_defs = Vec::new();
             shader_defs.push("LINES_3D".to_string());
@@ -47,29 +48,14 @@ pub mod r3d {
                 shader_defs.push("DEPTH_TEST_ENABLED".to_string());
             }
 
-            let mut descriptor = self.mesh_pipeline.specialize(key);
+            let mut descriptor = self.mesh_pipeline.specialize(key, &layout)?;
             descriptor.vertex.shader = self.shader.clone_weak();
             descriptor.vertex.shader_defs = shader_defs.clone();
-            descriptor.vertex.buffers[0] = VertexBufferLayout {
-                // NOTE: I've no idea why, but `color` is at offset zero and
-                // `position` at 4*4. Swapping breaks everything
-                array_stride: 4 * 4 + 4 * 3, // sizeof(Float32x4) + sizeof(Float32x3)
-                step_mode: VertexStepMode::Vertex,
-                attributes: vec![
-                    VertexAttribute {
-                        // Vertex.color
-                        format: Float32x4,
-                        offset: 0,
-                        shader_location: 0,
-                    },
-                    VertexAttribute {
-                        // Vertex.place (position)
-                        format: Float32x3,
-                        offset: 4 * 4, // sizeof(Float32x4)
-                        shader_location: 1,
-                    },
-                ],
-            };
+            let formats = vec![
+                VertexFormat::Uint32,
+                VertexFormat::Float32x3,
+            ];
+            descriptor.vertex.buffers[0] = VertexBufferLayout::from_vertex_formats(VertexStepMode::Vertex, formats);
             let fragment = descriptor.fragment.as_mut().unwrap();
             fragment.shader = self.shader.clone_weak();
             fragment.shader_defs = shader_defs.clone();
@@ -78,20 +64,22 @@ pub mod r3d {
             //if self.always_in_front {
                 //descriptor.depth_stencil.as_mut().unwrap().bias.constant = i32::MAX;
             //}
-            descriptor
+            Ok(descriptor)
         }
     }
 
     pub(crate) fn queue(
         opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
-        mut pipelines: ResMut<SpecializedPipelines<DebugLinePipeline>>,
-        mut pipeline_cache: ResMut<RenderPipelineCache>,
+        mut pipelines: ResMut<SpecializedMeshPipelines<DebugLinePipeline>>,
+        mut pipeline_cache: ResMut<PipelineCache>,
+        render_meshes: Res<RenderAssets<Mesh>>,
         msaa: Res<Msaa>,
-        material_meshes: Query<(Entity, &MeshUniform), With<RenderDebugLinesMesh>>,
+        material_meshes: Query<(Entity, &MeshUniform, &Handle<Mesh>), With<RenderDebugLinesMesh>>,
         config: Res<DebugLinesConfig>,
         mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
     ) {
+        dbg!("start queue");
         let draw_custom = opaque_3d_draw_functions
             .read()
             .get_id::<DrawDebugLines>()
@@ -100,16 +88,26 @@ pub mod r3d {
         for (view, mut transparent_phase) in views.iter_mut() {
             let view_matrix = view.transform.compute_matrix();
             let view_row_2 = view_matrix.row(2);
-            for (entity, mesh_uniform) in material_meshes.iter() {
-                let pipeline = pipelines.specialize(&mut pipeline_cache, &debug_line_pipeline, (config.depth_test, key));
-                transparent_phase.add(Opaque3d {
-                    entity,
-                    pipeline,
-                    draw_function: draw_custom,
-                    distance: view_row_2.dot(mesh_uniform.transform.col(3)),
-                });
+            for (entity, mesh_uniform, mesh_handle) in material_meshes.iter() {
+                if let Some(mesh) = render_meshes.get(mesh_handle) {
+                    let pipeline = pipelines
+                        .specialize(
+                            &mut pipeline_cache,
+                            &debug_line_pipeline,
+                            (config.depth_test, key),
+                            &mesh.layout,
+                        )
+                        .unwrap();
+                    transparent_phase.add(Opaque3d {
+                        entity,
+                        pipeline,
+                        draw_function: draw_custom,
+                        distance: view_row_2.dot(mesh_uniform.transform.col(3)),
+                    });
+                }
             }
         }
+        dbg!("end queue");
     }
 
     pub(crate) type DrawDebugLines = (
@@ -121,25 +119,17 @@ pub mod r3d {
 }
 
 pub mod r2d {
-    use bevy::{
-        asset::Handle,
-        core::FloatOrd,
-        core_pipeline::Transparent2d,
-        prelude::*,
-        render::{
+    use bevy::{asset::Handle, core::FloatOrd, core_pipeline::Transparent2d, prelude::*, render::{
+            mesh::MeshVertexBufferLayout,
+            render_asset::RenderAssets,
             render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
             render_resource::{
-                PrimitiveTopology, RenderPipelineCache, RenderPipelineDescriptor, Shader,
-                SpecializedPipeline, SpecializedPipelines, VertexAttribute, VertexBufferLayout,
-                VertexFormat, VertexStepMode,
+                PipelineCache, PrimitiveTopology, RenderPipelineDescriptor, Shader,
+                SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
+                VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode,
             },
             view::{Msaa, VisibleEntities},
-        },
-        sprite::{
-            DrawMesh2d, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform, SetMesh2dBindGroup,
-            SetMesh2dViewBindGroup,
-        },
-    };
+        }, sprite::{DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform, SetMesh2dBindGroup, SetMesh2dViewBindGroup}};
 
     use crate::{RenderDebugLinesMesh, DEBUG_LINES_SHADER_HANDLE};
 
@@ -159,18 +149,28 @@ pub mod r2d {
         }
     }
 
-    impl SpecializedPipeline for DebugLinePipeline {
+    impl SpecializedMeshPipeline for DebugLinePipeline {
         type Key = Mesh2dPipelineKey;
 
-        fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
-            use VertexFormat::{Float32x3, Float32x4};
+        fn specialize(
+            &self,
+            key: Self::Key,
+            layout: &MeshVertexBufferLayout,
+        ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
+            //use VertexFormat::{Float32x3, Float32x4};
 
             //let mut shader_defs = Vec::new();
             //shader_defs.push("2D".to_string());
 
-            let mut descriptor = self.mesh_pipeline.specialize(key);
+            let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
             descriptor.vertex.shader = self.shader.clone_weak();
+            let formats = vec![
+                VertexFormat::Float32x3,
+                VertexFormat::Uint32,
+            ];
+            descriptor.vertex.buffers[0] = VertexBufferLayout::from_vertex_formats(VertexStepMode::Vertex, formats);
             //descriptor.vertex.shader_defs = shader_defs.clone();
+            /*
             descriptor.vertex.buffers[0] = VertexBufferLayout {
                 // NOTE: I've no idea why, but `color` is at offset zero and
                 // `position` at 4*4. Swapping breaks everything
@@ -191,44 +191,54 @@ pub mod r2d {
                     },
                 ],
             };
+*/
             let fragment = descriptor.fragment.as_mut().unwrap();
             fragment.shader = self.shader.clone_weak();
             //fragment.shader_defs = shader_defs.clone();
             descriptor.primitive.topology = PrimitiveTopology::LineList;
             descriptor.primitive.cull_mode = None;
-            descriptor
+            Ok(descriptor)
         }
     }
 
     pub(crate) fn queue(
         draw2d_functions: Res<DrawFunctions<Transparent2d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
-        mut pipeline_cache: ResMut<RenderPipelineCache>,
-        mut specialized_pipelines: ResMut<SpecializedPipelines<DebugLinePipeline>>,
+        mut pipeline_cache: ResMut<PipelineCache>,
+        mut specialized_pipelines: ResMut<SpecializedMeshPipelines<DebugLinePipeline>>,
+        render_meshes: Res<RenderAssets<Mesh>>,
         msaa: Res<Msaa>,
-        material_meshes: Query<&Mesh2dUniform, With<RenderDebugLinesMesh>>,
+        material_meshes: Query<(&Mesh2dUniform, &Mesh2dHandle), With<RenderDebugLinesMesh>>,
         mut views: Query<(&VisibleEntities, &mut RenderPhase<Transparent2d>)>,
     ) {
         for (view, mut phase) in views.iter_mut() {
             let draw_mesh2d = draw2d_functions.read().get_id::<DrawDebugLines>().unwrap();
-            let mesh_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples);
+            let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples);
 
             for visible_entity in &view.entities {
-                if let Ok(uniform) = material_meshes.get(*visible_entity) {
-                    let mesh2d_key = mesh_key
-                        | Mesh2dPipelineKey::from_primitive_topology(PrimitiveTopology::LineList);
-                    let mesh_z = uniform.transform.w_axis.z;
-                    phase.add(Transparent2d {
-                        entity: *visible_entity,
-                        draw_function: draw_mesh2d,
-                        pipeline: specialized_pipelines.specialize(
-                            &mut pipeline_cache,
-                            &debug_line_pipeline,
-                            mesh2d_key,
-                        ),
-                        sort_key: FloatOrd(mesh_z),
-                        batch_range: None,
-                    });
+                if let Ok((uniform, mesh_handle)) = material_meshes.get(*visible_entity) {
+                    if let Some(mesh) = render_meshes.get(&mesh_handle.0) {
+                        let mesh_key = msaa_key
+                            | Mesh2dPipelineKey::from_primitive_topology(
+                                PrimitiveTopology::LineList,
+                            );
+                        let mesh_z = uniform.transform.w_axis.z;
+                        let pipeline = specialized_pipelines
+                            .specialize(
+                                &mut pipeline_cache,
+                                &debug_line_pipeline,
+                                mesh_key,
+                                &mesh.layout,
+                            )
+                            .unwrap();
+                        phase.add(Transparent2d {
+                            entity: *visible_entity,
+                            draw_function: draw_mesh2d,
+                            pipeline,
+                            sort_key: FloatOrd(mesh_z),
+                            batch_range: None,
+                        });
+                    }
                 }
             }
         }
@@ -241,4 +251,3 @@ pub mod r2d {
         DrawMesh2d,
     );
 }
-

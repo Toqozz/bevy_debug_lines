@@ -6,10 +6,10 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin::default())
-        .add_startup_system(setup)
-        .add_system(demo)
-        .run();
+        //.add_plugin(DebugLinesPlugin::default())
+        //.add_startup_system(setup)
+        //.add_system(demo)
+        //.run();
 }
 
 fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
