@@ -2,17 +2,7 @@ pub mod r3d {
     use bevy::{core_pipeline::Opaque3d, pbr::{
             DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup,
             SetMeshViewBindGroup,
-        }, prelude::*, render::{
-            mesh::MeshVertexBufferLayout,
-            render_asset::RenderAssets,
-            render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
-            render_resource::{
-                PipelineCache, PrimitiveTopology, RenderPipelineDescriptor,
-                SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
-                VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode,
-            },
-            view::{ExtractedView, Msaa},
-        }, utils::Hashed};
+        }, prelude::*, render::{mesh::MeshVertexBufferLayout, render_asset::RenderAssets, render_phase::{DrawFunctions, RenderPhase, SetItemPipeline}, render_resource::{BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState, FragmentState, FrontFace, MultisampleState, PipelineCache, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor, SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines, StencilFaceState, StencilState, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexState, VertexStepMode}, texture::BevyDefault, view::{ExtractedView, Msaa}}, utils::Hashed};
 
     use crate::{DebugLinesConfig, RenderDebugLinesMesh, DEBUG_LINES_SHADER_HANDLE};
 
@@ -48,23 +38,76 @@ pub mod r3d {
                 shader_defs.push("DEPTH_TEST_ENABLED".to_string());
             }
 
-            let mut descriptor = self.mesh_pipeline.specialize(key, &layout)?;
-            descriptor.vertex.shader = self.shader.clone_weak();
-            descriptor.vertex.shader_defs = shader_defs.clone();
-            let formats = vec![
-                VertexFormat::Uint32,
-                VertexFormat::Float32x3,
-            ];
-            descriptor.vertex.buffers[0] = VertexBufferLayout::from_vertex_formats(VertexStepMode::Vertex, formats);
-            let fragment = descriptor.fragment.as_mut().unwrap();
-            fragment.shader = self.shader.clone_weak();
-            fragment.shader_defs = shader_defs.clone();
-            descriptor.primitive.topology = PrimitiveTopology::LineList;
-            descriptor.primitive.cull_mode = None;
-            //if self.always_in_front {
-                //descriptor.depth_stencil.as_mut().unwrap().bias.constant = i32::MAX;
-            //}
-            Ok(descriptor)
+            let vertex_buffer_layout = layout.get_layout(&[
+                Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+                Mesh::ATTRIBUTE_COLOR.at_shader_location(1),
+            ])?;
+            let (label, blend, depth_write_enabled);
+            if key.contains(MeshPipelineKey::TRANSPARENT_MAIN_PASS) {
+                label = "transparent_mesh_pipeline".into();
+                blend = Some(BlendState::ALPHA_BLENDING);
+                // For the transparent pass, fragments that are closer will be alpha
+                // blended but their depth is not written to the depth buffer.
+                depth_write_enabled = false;
+            } else {
+                label = "opaque_mesh_pipeline".into();
+                blend = Some(BlendState::REPLACE);
+                // For the opaque and alpha mask passes, fragments that are closer
+                // will replace the current fragment value in the output and the depth is
+                // written to the depth buffer.
+                depth_write_enabled = true;
+            }
+
+            Ok(RenderPipelineDescriptor {
+                vertex: VertexState {
+                    shader: self.shader.clone_weak(),
+                    entry_point: "vertex".into(),
+                    shader_defs: shader_defs.clone(),
+                    buffers: vec![vertex_buffer_layout],
+                },
+                fragment: Some(FragmentState {
+                    shader: self.shader.clone_weak(),
+                    shader_defs,
+                    entry_point: "fragment".into(),
+                    targets: vec![ColorTargetState {
+                        format: TextureFormat::bevy_default(),
+                        blend,
+                        write_mask: ColorWrites::ALL,
+                    }],
+                }),
+                layout: Some(vec![self.mesh_pipeline.view_layout.clone()]),
+                primitive: PrimitiveState {
+                    front_face: FrontFace::Ccw,
+                    cull_mode: None,
+                    unclipped_depth: false,
+                    polygon_mode: PolygonMode::Fill,
+                    conservative: false,
+                    topology: PrimitiveTopology::LineList,
+                    strip_index_format: None,
+                },
+                depth_stencil: Some(DepthStencilState {
+                    format: TextureFormat::Depth32Float,
+                    depth_write_enabled,
+                    depth_compare: CompareFunction::Greater,
+                    stencil: StencilState {
+                        front: StencilFaceState::IGNORE,
+                        back: StencilFaceState::IGNORE,
+                        read_mask: 0,
+                        write_mask: 0,
+                    },
+                    bias: DepthBiasState {
+                        constant: 0,
+                        slope_scale: 0.0,
+                        clamp: 0.0,
+                    },
+                }),
+                multisample: MultisampleState {
+                    count: key.msaa_samples(),
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+                label: Some(label),
+            })
         }
     }
 
@@ -79,7 +122,6 @@ pub mod r3d {
         config: Res<DebugLinesConfig>,
         mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
     ) {
-        dbg!("start queue");
         let draw_custom = opaque_3d_draw_functions
             .read()
             .get_id::<DrawDebugLines>()
@@ -107,7 +149,6 @@ pub mod r3d {
                 }
             }
         }
-        dbg!("end queue");
     }
 
     pub(crate) type DrawDebugLines = (
@@ -119,17 +160,7 @@ pub mod r3d {
 }
 
 pub mod r2d {
-    use bevy::{asset::Handle, core::FloatOrd, core_pipeline::Transparent2d, prelude::*, render::{
-            mesh::MeshVertexBufferLayout,
-            render_asset::RenderAssets,
-            render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
-            render_resource::{
-                PipelineCache, PrimitiveTopology, RenderPipelineDescriptor, Shader,
-                SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
-                VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode,
-            },
-            view::{Msaa, VisibleEntities},
-        }, sprite::{DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform, SetMesh2dBindGroup, SetMesh2dViewBindGroup}};
+    use bevy::{asset::Handle, core::FloatOrd, core_pipeline::Transparent2d, prelude::*, render::{mesh::MeshVertexBufferLayout, render_asset::RenderAssets, render_phase::{DrawFunctions, RenderPhase, SetItemPipeline}, render_resource::{BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState, FragmentState, FrontFace, MultisampleState, PipelineCache, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor, Shader, SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines, StencilFaceState, StencilState, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexState, VertexStepMode}, texture::BevyDefault, view::{Msaa, VisibleEntities}}, sprite::{DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform, SetMesh2dBindGroup, SetMesh2dViewBindGroup}};
 
     use crate::{RenderDebugLinesMesh, DEBUG_LINES_SHADER_HANDLE};
 
@@ -157,47 +188,55 @@ pub mod r2d {
             key: Self::Key,
             layout: &MeshVertexBufferLayout,
         ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
-            //use VertexFormat::{Float32x3, Float32x4};
 
-            //let mut shader_defs = Vec::new();
-            //shader_defs.push("2D".to_string());
-
-            let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
-            descriptor.vertex.shader = self.shader.clone_weak();
-            let formats = vec![
-                VertexFormat::Float32x3,
-                VertexFormat::Uint32,
-            ];
-            descriptor.vertex.buffers[0] = VertexBufferLayout::from_vertex_formats(VertexStepMode::Vertex, formats);
-            //descriptor.vertex.shader_defs = shader_defs.clone();
             /*
-            descriptor.vertex.buffers[0] = VertexBufferLayout {
-                // NOTE: I've no idea why, but `color` is at offset zero and
-                // `position` at 4*4. Swapping breaks everything
-                array_stride: 4 * 4 + 4 * 3, // sizeof(Float32x4) + sizeof(Float32x3)
-                step_mode: VertexStepMode::Vertex,
-                attributes: vec![
-                    VertexAttribute {
-                        // Vertex.color
-                        format: Float32x4,
-                        offset: 0,
-                        shader_location: 0,
-                    },
-                    VertexAttribute {
-                        // Vertex.place (position)
-                        format: Float32x3,
-                        offset: 4 * 4, // sizeof(Float32x4)
-                        shader_location: 1,
-                    },
-                ],
-            };
+            let mut shader_defs = Vec::new();
+            shader_defs.push("LINES_3D".to_string());
+            if depth_test {
+                shader_defs.push("DEPTH_TEST_ENABLED".to_string());
+            }
 */
-            let fragment = descriptor.fragment.as_mut().unwrap();
-            fragment.shader = self.shader.clone_weak();
-            //fragment.shader_defs = shader_defs.clone();
-            descriptor.primitive.topology = PrimitiveTopology::LineList;
-            descriptor.primitive.cull_mode = None;
-            Ok(descriptor)
+
+            let vertex_buffer_layout = layout.get_layout(&[
+                Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+                Mesh::ATTRIBUTE_COLOR.at_shader_location(1),
+            ])?;
+
+            Ok(RenderPipelineDescriptor {
+                vertex: VertexState {
+                    shader: self.shader.clone_weak(),
+                    entry_point: "vertex".into(),
+                    shader_defs: vec![],
+                    buffers: vec![vertex_buffer_layout],
+                },
+                fragment: Some(FragmentState {
+                    shader: self.shader.clone_weak(),
+                    shader_defs: vec![],
+                    entry_point: "fragment".into(),
+                    targets: vec![ColorTargetState {
+                        format: TextureFormat::bevy_default(),
+                        blend: Some(BlendState::ALPHA_BLENDING),
+                        write_mask: ColorWrites::ALL,
+                    }],
+                }),
+                layout: Some(vec![self.mesh_pipeline.view_layout.clone()]),
+                primitive: PrimitiveState {
+                    front_face: FrontFace::Ccw,
+                    cull_mode: None,
+                    unclipped_depth: false,
+                    polygon_mode: PolygonMode::Fill,
+                    conservative: false,
+                    topology: PrimitiveTopology::LineList,
+                    strip_index_format: None,
+                },
+                depth_stencil: None,
+                multisample: MultisampleState {
+                    count: key.msaa_samples(),
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+                label: None,
+            })
         }
     }
 

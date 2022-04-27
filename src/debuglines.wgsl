@@ -7,8 +7,8 @@
 #endif
 
 struct Vertex {
-    [[location(0)]] color: vec4<f32>;
-    [[location(1)]] pos: vec3<f32>;
+    [[location(0)]] pos: vec3<f32>;
+    [[location(1)]] color: u32;
 };
 
 struct VertexOutput {
@@ -25,7 +25,9 @@ struct FragmentOutput {
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
     out.clip_position = view.view_proj * vec4<f32>(vertex.pos, 1.0);
-    out.color = vertex.color;
+    //out.color = vertex.color;
+    // https://github.com/bevyengine/bevy/blob/328c26d02c50de0bc77f0d24a376f43ba89517b1/examples/2d/mesh2d_manual.rs#L234
+    out.color = vec4<f32>((vec4<u32>(vertex.color) >> vec4<u32>(8u, 8u, 16u, 24u)) & vec4<u32>(255u)) / 255.0;
 
     return out;
 }

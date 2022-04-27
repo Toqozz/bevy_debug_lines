@@ -13,7 +13,7 @@ version = "0.6.1"
 exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 
 [dependencies]
-bevy = { version = "0.6", default-features = false, features = [ "render" ] }
+bevy = { version = "0.7", default-features = false, features = [ "bevy_core_pipeline", "bevy_render", "bevy_pbr", "bevy_sprite" ] }
 
 [features]
 example_deps_2d = [
