@@ -168,7 +168,7 @@ fn update(
     // For each debug line mesh, fill its buffers with the relevant positions/colors chunks.
     for (mesh_handle, debug_lines_idx) in debug_line_meshes.iter() {
         let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
-        use VertexAttributeValues::{Float32x3, Float32x4, Uint32};
+        use VertexAttributeValues::{Float32x3, Uint32};
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
             if let Some(new_content) = lines.positions.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
