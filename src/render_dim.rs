@@ -175,7 +175,21 @@ pub mod r3d {
 }
 
 pub mod r2d {
-    use bevy::{asset::Handle, core::FloatOrd, core_pipeline::Transparent2d, prelude::*, render::{mesh::MeshVertexBufferLayout, render_asset::RenderAssets, render_phase::{DrawFunctions, RenderPhase, SetItemPipeline}, render_resource::{BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState, FragmentState, FrontFace, MultisampleState, PipelineCache, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor, Shader, SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines, StencilFaceState, StencilState, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexState, VertexStepMode}, texture::BevyDefault, view::{Msaa, VisibleEntities}}, sprite::{DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform, SetMesh2dBindGroup, SetMesh2dViewBindGroup}};
+    use bevy::{
+        prelude::*,
+        asset::Handle,
+        core::FloatOrd,
+        core_pipeline::Transparent2d,
+        render::{
+            mesh::MeshVertexBufferLayout, render_asset::RenderAssets,
+            render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
+            render_resource::{
+                BlendState, ColorTargetState, ColorWrites, FragmentState,
+                FrontFace, MultisampleState, PipelineCache, PolygonMode,
+                PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor, Shader,
+                SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
+                TextureFormat, VertexState
+            }, texture::BevyDefault, view::{Msaa, VisibleEntities}}, sprite::{DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform, SetMesh2dBindGroup, SetMesh2dViewBindGroup}};
 
     use crate::{RenderDebugLinesMesh, DEBUG_LINES_SHADER_HANDLE};
 
