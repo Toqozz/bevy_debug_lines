@@ -1,23 +1,40 @@
 pub mod r3d {
-    use bevy::{core_pipeline::Opaque3d, pbr::{
-            DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup,
-            SetMeshViewBindGroup,
-        }, prelude::*, render::{mesh::MeshVertexBufferLayout, render_asset::RenderAssets, render_phase::{DrawFunctions, RenderPhase, SetItemPipeline}, render_resource::{BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState, FragmentState, FrontFace, MultisampleState, PipelineCache, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor, SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines, StencilFaceState, StencilState, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat, VertexState, VertexStepMode}, texture::BevyDefault, view::{ExtractedView, Msaa}}, utils::Hashed};
+    use bevy::{
+        prelude::*,
+        core_pipeline::Opaque3d,
+        pbr::{
+            DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup, SetMeshViewBindGroup,
+        },
+        render::{
+            mesh::MeshVertexBufferLayout,
+            render_asset::RenderAssets,
+            render_phase::{
+                DrawFunctions, RenderPhase, SetItemPipeline
+            },
+            render_resource::{
+                BlendState, ColorTargetState, ColorWrites, CompareFunction,
+                DepthBiasState, DepthStencilState, FragmentState, FrontFace,
+                MultisampleState, PipelineCache, PolygonMode, PrimitiveState,
+                PrimitiveTopology, RenderPipelineDescriptor, SpecializedMeshPipeline, SpecializedMeshPipelineError,
+                SpecializedMeshPipelines, StencilFaceState, StencilState, TextureFormat,
+                VertexState
+            },
+            texture::BevyDefault,
+            view::{ExtractedView, Msaa}
+        },
+    };
 
     use crate::{DebugLinesConfig, RenderDebugLinesMesh, DEBUG_LINES_SHADER_HANDLE};
 
     pub(crate) struct DebugLinePipeline {
         mesh_pipeline: MeshPipeline,
         shader: Handle<Shader>,
-        //always_in_front: bool,
     }
     impl FromWorld for DebugLinePipeline {
         fn from_world(render_world: &mut World) -> Self {
-            //let config = render_world.get_resource::<DebugLinesConfig>().unwrap();
             DebugLinePipeline {
                 mesh_pipeline: render_world.get_resource::<MeshPipeline>().unwrap().clone(),
                 shader: DEBUG_LINES_SHADER_HANDLE.typed(),
-                //always_in_front: config.always_in_front,
             }
         }
     }
@@ -30,8 +47,6 @@ pub mod r3d {
             (depth_test, key): Self::Key,
             layout: &MeshVertexBufferLayout,
         ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
-            //use VertexFormat::{Float32x3, Float32x4};
-
             let mut shader_defs = Vec::new();
             shader_defs.push("LINES_3D".to_string());
             if depth_test {
@@ -188,15 +203,6 @@ pub mod r2d {
             key: Self::Key,
             layout: &MeshVertexBufferLayout,
         ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
-
-            /*
-            let mut shader_defs = Vec::new();
-            shader_defs.push("LINES_3D".to_string());
-            if depth_test {
-                shader_defs.push("DEPTH_TEST_ENABLED".to_string());
-            }
-*/
-
             let vertex_buffer_layout = layout.get_layout(&[
                 Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
                 Mesh::ATTRIBUTE_COLOR.at_shader_location(1),
