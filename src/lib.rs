@@ -296,10 +296,8 @@ impl DebugLines {
 
         self.positions.push(start.into());
         self.positions.push(end.into());
-        //self.colors.push(start_color.into());
-        //self.colors.push(end_color.into());
-        self.colors.push(start_color.as_rgba_u32());
-        self.colors.push(end_color.as_rgba_u32());
+        self.colors.push(start_color.as_linear_rgba_u32());
+        self.colors.push(end_color.as_linear_rgba_u32());
         self.durations.push(duration);
     }
 
