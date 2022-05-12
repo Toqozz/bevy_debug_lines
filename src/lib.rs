@@ -1,13 +1,15 @@
 use bevy::{
-    prelude::*,
     asset::{Assets, HandleUntyped},
     pbr::{NotShadowCaster, NotShadowReceiver},
+    prelude::*,
     reflect::TypeUuid,
     render::{
+        mesh::{/*Indices,*/ Mesh, VertexAttributeValues},
+        render_phase::AddRenderCommand,
+        render_resource::PrimitiveTopology,
         render_resource::Shader,
-        mesh::{/*Indices,*/Mesh, VertexAttributeValues},
-        render_phase::AddRenderCommand, render_resource::PrimitiveTopology
-    }
+        view::NoFrustumCulling,
+    },
 };
 
 mod render_dim;
@@ -17,25 +19,33 @@ mod render_dim;
 // gates-specific code.
 #[cfg(feature = "3d")]
 mod dim {
-    use bevy::{asset::Handle, render::mesh::Mesh};
-    pub(crate) use bevy::core_pipeline::Opaque3d as Phase;
     pub(crate) use crate::render_dim::r3d::{queue, DebugLinePipeline, DrawDebugLines};
+    pub(crate) use bevy::core_pipeline::Opaque3d as Phase;
+    use bevy::{asset::Handle, render::mesh::Mesh};
 
     pub(crate) type MeshHandle = Handle<Mesh>;
-    pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> { from }
-    pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle { from }
+    pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> {
+        from
+    }
+    pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
+        from
+    }
     pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
     pub(crate) const DIMMENSION: &str = "3d";
 }
 #[cfg(not(feature = "3d"))]
 mod dim {
-    use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
-    pub(crate) use bevy::core_pipeline::Transparent2d as Phase;
     pub(crate) use crate::render_dim::r2d::{queue, DebugLinePipeline, DrawDebugLines};
+    pub(crate) use bevy::core_pipeline::Transparent2d as Phase;
+    use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
 
     pub(crate) type MeshHandle = Mesh2dHandle;
-    pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> { &from.0 }
-    pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle { Mesh2dHandle(from) }
+    pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> {
+        &from.0
+    }
+    pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
+        Mesh2dHandle(from)
+    }
     pub(crate) const SHADER_FILE: &str = include_str!("debuglines2d.wgsl");
     pub(crate) const DIMMENSION: &str = "2d";
 }
@@ -84,13 +94,11 @@ impl DebugLinesPlugin {
     /// or disabled.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `val` - True if lines should intersect with other geometry, or false
     ///   if lines should always draw on top be drawn on top (the default).
     pub fn with_depth_test(val: bool) -> Self {
-        Self {
-            depth_test: val,
-        }
+        Self { depth_test: val }
     }
 }
 
@@ -104,10 +112,12 @@ impl Plugin for DebugLinesPlugin {
         );
         app.init_resource::<DebugLines>();
         app.add_startup_system(setup)
-           .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
+            .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
         app.sub_app_mut(RenderApp)
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
-            .insert_resource(DebugLinesConfig { depth_test: self.depth_test})
+            .insert_resource(DebugLinesConfig {
+                depth_test: self.depth_test,
+            })
             .init_resource::<dim::DebugLinePipeline>()
             .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
             .add_system_to_stage(RenderStage::Extract, extract)
@@ -116,8 +126,6 @@ impl Plugin for DebugLinesPlugin {
         info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
     }
 }
-
-
 
 // Number of meshes to separate line buffers into.
 // We don't really do culling currently but this is a gateway to that.
@@ -155,6 +163,7 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             Visibility::default(),
             ComputedVisibility::default(),
             DebugLinesMesh(i),
+            NoFrustumCulling, // disable frustum culling
         ));
     }
 }
@@ -171,14 +180,22 @@ fn update(
         use VertexAttributeValues::{Float32x3, Uint32};
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
-            if let Some(new_content) = lines.positions.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
+            if let Some(new_content) = lines
+                .positions
+                .chunks(MAX_POINTS_PER_MESH)
+                .nth(debug_lines_idx.0)
+            {
                 vbuffer.extend(new_content);
             }
         }
 
         if let Some(Uint32(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
             cbuffer.clear();
-            if let Some(new_content) = lines.colors.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
+            if let Some(new_content) = lines
+                .colors
+                .chunks(MAX_POINTS_PER_MESH)
+                .nth(debug_lines_idx.0)
+            {
                 cbuffer.extend(new_content);
             }
         }
@@ -193,7 +210,7 @@ fn update(
                 );
             }
         }
-        */ 
+        */
     }
 
     // Processes stuff like getting rid of expired lines and stuff.
@@ -305,7 +322,7 @@ impl DebugLines {
     // The indices can also be used to access color data.
     fn nth(&self, idx: usize) -> (usize, usize) {
         let i = idx * 2;
-        (i, i+1)
+        (i, i + 1)
     }
 
     // Prepare [`ImmediateLinesStorage`] and [`RetainedLinesStorage`] for next
@@ -322,12 +339,12 @@ impl DebugLines {
             // data to the mesh, so we're guaranteed at least a frame here.
             if self.durations[i] <= 0.0 {
                 let (cur_s, cur_e) = self.nth(i);
-                let (last_s, last_e) = self.nth(len-1);
+                let (last_s, last_e) = self.nth(len - 1);
                 self.positions.swap(cur_s, last_s);
                 self.positions.swap(cur_e, last_e);
                 self.colors.swap(cur_s, last_s);
                 self.colors.swap(cur_e, last_e);
-                self.durations.swap(i, len-1);
+                self.durations.swap(i, len - 1);
                 len -= 1;
             } else {
                 i += 1;
