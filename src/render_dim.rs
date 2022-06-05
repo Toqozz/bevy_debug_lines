@@ -294,7 +294,7 @@ pub mod r2d {
                             entity: *visible_entity,
                             draw_function: draw_mesh2d,
                             pipeline,
-                            sort_key: FloatOrd(mesh_z),
+                            sort_key: FloatOrd(1.0),
                             batch_range: None,
                         });
                     }

@@ -19,6 +19,7 @@ bevy = { version = "0.7", default-features = false, features = [ "bevy_core_pipe
 example_deps_2d = [
     "bevy/bevy_winit",
     "bevy/bevy_gltf",
+    "bevy/png",
     "bevy/x11",
 ]
 example_deps = [
