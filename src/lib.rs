@@ -113,6 +113,7 @@ impl Plugin for DebugLinesPlugin {
         app.init_resource::<DebugLines>();
         app.add_startup_system(setup)
             .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
+
         app.sub_app_mut(RenderApp)
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
             .insert_resource(DebugLinesConfig {

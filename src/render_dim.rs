@@ -281,7 +281,6 @@ pub mod r2d {
                             | Mesh2dPipelineKey::from_primitive_topology(
                                 PrimitiveTopology::LineList,
                             );
-                        let mesh_z = uniform.transform.w_axis.z;
                         let pipeline = specialized_pipelines
                             .specialize(
                                 &mut pipeline_cache,
