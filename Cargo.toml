@@ -49,3 +49,7 @@ required-features = ["example_deps"]
 [[example]]
 name = "movement"
 required-features = ["example_deps"]
+
+[[example]]
+name = "sprite"
+required-features = ["example_deps_2d"]
