@@ -293,7 +293,7 @@ pub mod r2d {
                             entity: *visible_entity,
                             draw_function: draw_mesh2d,
                             pipeline,
-                            sort_key: FloatOrd(1.0),
+                            sort_key: FloatOrd(f32::INFINITY),
                             batch_range: None,
                         });
                     }
