@@ -275,7 +275,7 @@ pub mod r2d {
             let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples);
 
             for visible_entity in &view.entities {
-                if let Ok((uniform, mesh_handle)) = material_meshes.get(*visible_entity) {
+                if let Ok((_uniform, mesh_handle)) = material_meshes.get(*visible_entity) {
                     if let Some(mesh) = render_meshes.get(&mesh_handle.0) {
                         let mesh_key = msaa_key
                             | Mesh2dPipelineKey::from_primitive_topology(
