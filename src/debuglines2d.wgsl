@@ -1,3 +1,5 @@
+#version 300 es
+
 #import bevy_sprite::mesh2d_view_bind_group
 [[group(0), binding(0)]]
 var<uniform> view: View;
