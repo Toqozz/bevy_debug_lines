@@ -150,7 +150,7 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         );
         mesh.insert_attribute(
             Mesh::ATTRIBUTE_COLOR,
-            VertexAttributeValues::Uint32(Vec::with_capacity(MAX_POINTS_PER_MESH)),
+            VertexAttributeValues::Float32x4(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
         // https://github.com/Toqozz/bevy_debug_lines/issues/16
         //mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
