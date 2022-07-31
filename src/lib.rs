@@ -36,7 +36,7 @@ mod dim {
 #[cfg(not(feature = "3d"))]
 mod dim {
     pub(crate) use crate::render_dim::r2d::{queue, DebugLinePipeline, DrawDebugLines};
-    pub(crate) use bevy::core_pipeline::Transparent2d as Phase;
+    pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
 
     pub(crate) type MeshHandle = Mesh2dHandle;
