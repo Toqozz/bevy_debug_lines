@@ -8,7 +8,7 @@ use bevy::{
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
         render_resource::Shader,
-        view::NoFrustumCulling,
+        view::NoFrustumCulling, MainWorld,
     },
 };
 
@@ -219,7 +219,7 @@ fn update(
 }
 
 /// Move the DebugLinesMesh marker Component to the render context.
-fn extract(mut commands: Commands, query: Query<Entity, With<DebugLinesMesh>>) {
+fn extract(mut commands: Commands, _mainworld: Res<MainWorld>, query: Query<Entity, With<DebugLinesMesh>>) {
     for entity in query.iter() {
         commands.get_or_spawn(entity).insert(RenderDebugLinesMesh);
     }
