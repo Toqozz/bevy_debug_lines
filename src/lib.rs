@@ -178,7 +178,7 @@ fn update(
     // For each debug line mesh, fill its buffers with the relevant positions/colors chunks.
     for (mesh_handle, debug_lines_idx) in debug_line_meshes.iter() {
         let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
-        use VertexAttributeValues::{Float32x3, Uint32};
+        use VertexAttributeValues::{Float32x3, Float32x4};
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
             if let Some(new_content) = lines
@@ -190,7 +190,7 @@ fn update(
             }
         }
 
-        if let Some(Uint32(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
+        if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
             cbuffer.clear();
             if let Some(new_content) = lines
                 .colors
@@ -258,8 +258,7 @@ struct RenderDebugLinesMesh;
 #[derive(Default)]
 pub struct DebugLines {
     pub positions: Vec<[f32; 3]>,
-    //pub colors: Vec<[f32; 4]>,
-    pub colors: Vec<u32>,
+    pub colors: Vec<[f32; 4]>,
     pub durations: Vec<f32>,
 }
 
@@ -314,8 +313,8 @@ impl DebugLines {
 
         self.positions.push(start.into());
         self.positions.push(end.into());
-        self.colors.push(start_color.as_linear_rgba_u32());
-        self.colors.push(end_color.as_linear_rgba_u32());
+        self.colors.push(start_color.as_linear_rgba_f32());
+        self.colors.push(end_color.as_linear_rgba_f32());
         self.durations.push(duration);
     }
 
