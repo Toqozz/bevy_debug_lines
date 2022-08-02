@@ -12,7 +12,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let mut camera = OrthographicCameraBundle::new_2d();
+    let mut camera = Camera2dBundle::default();
     camera.transform = Transform::from_translation(Vec3::new(0.0, 0.0, 5.0));
 
     commands.spawn_bundle(camera);

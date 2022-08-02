@@ -1,7 +1,7 @@
 pub mod r3d {
     use bevy::{
         prelude::*,
-        core_pipeline::Opaque3d,
+        core_pipeline::core_3d::Opaque3d,
         pbr::{
             DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup, SetMeshViewBindGroup,
         },
@@ -84,11 +84,11 @@ pub mod r3d {
                     shader: self.shader.clone_weak(),
                     shader_defs,
                     entry_point: "fragment".into(),
-                    targets: vec![ColorTargetState {
+                    targets: vec![Some(ColorTargetState {
                         format: TextureFormat::bevy_default(),
                         blend,
                         write_mask: ColorWrites::ALL,
-                    }],
+                    })],
                 }),
                 layout: Some(vec![self.mesh_pipeline.view_layout.clone()]),
                 primitive: PrimitiveState {
@@ -178,8 +178,8 @@ pub mod r2d {
     use bevy::{
         prelude::*,
         asset::Handle,
-        core::FloatOrd,
-        core_pipeline::Transparent2d,
+        utils::FloatOrd,
+        core_pipeline::core_2d::Transparent2d,
         render::{
             mesh::MeshVertexBufferLayout, render_asset::RenderAssets,
             render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
@@ -233,11 +233,11 @@ pub mod r2d {
                     shader: self.shader.clone_weak(),
                     shader_defs: vec![],
                     entry_point: "fragment".into(),
-                    targets: vec![ColorTargetState {
+                    targets: vec![Some(ColorTargetState {
                         format: TextureFormat::bevy_default(),
                         blend: Some(BlendState::ALPHA_BLENDING),
                         write_mask: ColorWrites::ALL,
-                    }],
+                    })],
                 }),
                 layout: Some(vec![self.mesh_pipeline.view_layout.clone()]),
                 primitive: PrimitiveState {

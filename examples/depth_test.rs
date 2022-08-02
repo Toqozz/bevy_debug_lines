@@ -6,10 +6,9 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        //.add_plugin(DebugLinesPlugin::default())
-        .add_plugin(DebugLinesPlugin::with_depth_test(true))    // Allows lines to intersect other geometry.
-        .add_startup_system(setup.system())
-        .add_system(demo.system())
+        .add_plugin(DebugLinesPlugin::with_depth_test(true))
+        .add_startup_system(setup)
+        .add_system(demo)
         .run();
 }
 
@@ -18,9 +17,9 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn_bundle(PerspectiveCameraBundle {
+    commands.spawn_bundle(Camera3dBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
-        ..Default::default()
+        ..default()
     });
 
     commands.spawn_bundle(PbrBundle {

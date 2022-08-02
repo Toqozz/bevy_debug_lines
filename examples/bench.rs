@@ -25,9 +25,9 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn_bundle(PerspectiveCameraBundle {
+    commands.spawn_bundle(Camera3dBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
-        ..Default::default()
+        ..default()
     });
 }
 

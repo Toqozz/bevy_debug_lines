@@ -8,7 +8,7 @@ use bevy::{
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
         render_resource::Shader,
-        view::NoFrustumCulling,
+        view::NoFrustumCulling, Extract,
     },
 };
 
@@ -20,7 +20,7 @@ mod render_dim;
 #[cfg(feature = "3d")]
 mod dim {
     pub(crate) use crate::render_dim::r3d::{queue, DebugLinePipeline, DrawDebugLines};
-    pub(crate) use bevy::core_pipeline::Opaque3d as Phase;
+    pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh};
 
     pub(crate) type MeshHandle = Handle<Mesh>;
@@ -36,7 +36,7 @@ mod dim {
 #[cfg(not(feature = "3d"))]
 mod dim {
     pub(crate) use crate::render_dim::r2d::{queue, DebugLinePipeline, DrawDebugLines};
-    pub(crate) use bevy::core_pipeline::Transparent2d as Phase;
+    pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
 
     pub(crate) type MeshHandle = Mesh2dHandle;
@@ -150,7 +150,7 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         );
         mesh.insert_attribute(
             Mesh::ATTRIBUTE_COLOR,
-            VertexAttributeValues::Uint32(Vec::with_capacity(MAX_POINTS_PER_MESH)),
+            VertexAttributeValues::Float32x4(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
         // https://github.com/Toqozz/bevy_debug_lines/issues/16
         //mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
@@ -178,7 +178,7 @@ fn update(
     // For each debug line mesh, fill its buffers with the relevant positions/colors chunks.
     for (mesh_handle, debug_lines_idx) in debug_line_meshes.iter() {
         let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
-        use VertexAttributeValues::{Float32x3, Uint32};
+        use VertexAttributeValues::{Float32x3, Float32x4};
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
             if let Some(new_content) = lines
@@ -190,7 +190,7 @@ fn update(
             }
         }
 
-        if let Some(Uint32(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
+        if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
             cbuffer.clear();
             if let Some(new_content) = lines
                 .colors
@@ -219,7 +219,7 @@ fn update(
 }
 
 /// Move the DebugLinesMesh marker Component to the render context.
-fn extract(mut commands: Commands, query: Query<Entity, With<DebugLinesMesh>>) {
+fn extract(mut commands: Commands, query: Extract<Query<Entity, With<DebugLinesMesh>>>) {
     for entity in query.iter() {
         commands.get_or_spawn(entity).insert(RenderDebugLinesMesh);
     }
@@ -258,8 +258,7 @@ struct RenderDebugLinesMesh;
 #[derive(Default)]
 pub struct DebugLines {
     pub positions: Vec<[f32; 3]>,
-    //pub colors: Vec<[f32; 4]>,
-    pub colors: Vec<u32>,
+    pub colors: Vec<[f32; 4]>,
     pub durations: Vec<f32>,
 }
 
@@ -314,8 +313,8 @@ impl DebugLines {
 
         self.positions.push(start.into());
         self.positions.push(end.into());
-        self.colors.push(start_color.as_linear_rgba_u32());
-        self.colors.push(end_color.as_linear_rgba_u32());
+        self.colors.push(start_color.as_linear_rgba_f32());
+        self.colors.push(end_color.as_linear_rgba_f32());
         self.durations.push(duration);
     }
 
