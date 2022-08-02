@@ -1,5 +1,6 @@
 #import bevy_sprite::mesh2d_view_bindings
 
+
 struct Vertex {
     @location(0) place: vec3<f32>,
     @location(1) color: vec4<f32>
