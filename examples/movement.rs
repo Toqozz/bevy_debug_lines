@@ -17,9 +17,9 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn_bundle(PerspectiveCameraBundle {
+    commands.spawn_bundle(Camera3dBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
-        ..Default::default()
+        ..default()
     });
 
     commands

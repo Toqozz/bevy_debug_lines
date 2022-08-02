@@ -13,9 +13,9 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
-    commands.spawn_bundle(PerspectiveCameraBundle {
+    commands.spawn_bundle(Camera3dBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
-        ..Default::default()
+        ..default()
     });
     // A line that stays on screen 9 seconds
     lines.line_gradient(
