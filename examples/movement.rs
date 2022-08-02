@@ -7,7 +7,7 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin::default())
-        .add_startup_system(setup.system())
+        .add_startup_system(setup)
         .add_system(move_with_mouse)
         .run();
 }

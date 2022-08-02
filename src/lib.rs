@@ -20,7 +20,7 @@ mod render_dim;
 #[cfg(feature = "3d")]
 mod dim {
     pub(crate) use crate::render_dim::r3d::{queue, DebugLinePipeline, DrawDebugLines};
-    pub(crate) use bevy::core_pipeline::Opaque3d as Phase;
+    pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh};
 
     pub(crate) type MeshHandle = Handle<Mesh>;

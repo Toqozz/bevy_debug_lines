@@ -6,10 +6,9 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        //.add_plugin(DebugLinesPlugin::default())
-        .add_plugin(DebugLinesPlugin::with_depth_test(true))    // Allows lines to intersect other geometry.
-        .add_startup_system(setup.system())
-        .add_system(demo.system())
+        .add_plugin(DebugLinesPlugin::with_depth_test(true))
+        .add_startup_system(setup)
+        .add_system(demo)
         .run();
 }
 
