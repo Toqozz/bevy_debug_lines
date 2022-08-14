@@ -110,7 +110,8 @@ impl Plugin for DebugLinesPlugin {
             DEBUG_LINES_SHADER_HANDLE,
             Shader::from_wgsl(dim::SHADER_FILE),
         );
-        app.init_resource::<DebugLines>();
+
+        app.init_resource(DebugLines);
         app.add_startup_system(setup)
             .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
 
@@ -225,8 +226,9 @@ fn extract(mut commands: Commands, query: Extract<Query<Entity, With<DebugLinesM
     }
 }
 
+/// Marker component for the debug lines mesh in the world.
 #[derive(Component)]
-struct DebugLinesMesh(usize);
+pub struct DebugLinesMesh(usize);
 
 #[derive(Component)]
 struct RenderDebugLinesMesh;
