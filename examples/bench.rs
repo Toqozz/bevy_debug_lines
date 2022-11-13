@@ -7,11 +7,12 @@ use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            present_mode: PresentMode::Immediate,
-            ..Default::default()
-        })
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                present_mode: PresentMode::Immediate,
+                ..default()
+            }..default(),
+        }))
         .add_plugin(DebugLinesPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin {
@@ -25,7 +26,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn_bundle(Camera3dBundle {
+    commands.spawn(Camera3dBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
         ..default()
     });

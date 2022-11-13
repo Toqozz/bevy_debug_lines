@@ -8,7 +8,8 @@ use bevy::{
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
         render_resource::Shader,
-        view::NoFrustumCulling, Extract,
+        view::NoFrustumCulling,
+        Extract,
     },
 };
 
@@ -55,6 +56,7 @@ mod dim {
 pub(crate) const DEBUG_LINES_SHADER_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 17477439189930443325);
 
+#[derive(Resource)]
 pub(crate) struct DebugLinesConfig {
     depth_test: bool,
 }
@@ -157,7 +159,7 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         // https://github.com/Toqozz/bevy_debug_lines/issues/16
         //mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
 
-        cmds.spawn_bundle((
+        cmds.spawn((
             dim::into_handle(meshes.add(mesh)),
             NotShadowCaster,
             NotShadowReceiver,
@@ -258,7 +260,7 @@ struct RenderDebugLinesMesh;
 ///     );
 /// }
 /// ```
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct DebugLines {
     pub positions: Vec<[f32; 3]>,
     pub colors: Vec<[f32; 4]>,

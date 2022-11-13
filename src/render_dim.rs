@@ -1,35 +1,35 @@
 pub mod r3d {
     use bevy::{
-        prelude::*,
         core_pipeline::core_3d::Opaque3d,
         pbr::{
-            DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup, SetMeshViewBindGroup,
+            DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup,
+            SetMeshViewBindGroup,
         },
+        prelude::*,
         render::{
             mesh::MeshVertexBufferLayout,
             render_asset::RenderAssets,
-            render_phase::{
-                DrawFunctions, RenderPhase, SetItemPipeline
-            },
+            render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
             render_resource::{
-                BlendState, ColorTargetState, ColorWrites, CompareFunction,
-                DepthBiasState, DepthStencilState, FragmentState, FrontFace,
-                MultisampleState, PipelineCache, PolygonMode, PrimitiveState,
-                PrimitiveTopology, RenderPipelineDescriptor, SpecializedMeshPipeline, SpecializedMeshPipelineError,
-                SpecializedMeshPipelines, StencilFaceState, StencilState, TextureFormat,
-                VertexState
+                BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState,
+                DepthStencilState, FragmentState, FrontFace, MultisampleState, PipelineCache,
+                PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor,
+                SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
+                StencilFaceState, StencilState, TextureFormat, VertexState,
             },
             texture::BevyDefault,
-            view::{ExtractedView, Msaa}
+            view::{ExtractedView, Msaa},
         },
     };
 
     use crate::{DebugLinesConfig, RenderDebugLinesMesh, DEBUG_LINES_SHADER_HANDLE};
 
+    #[derive(Resource)]
     pub(crate) struct DebugLinePipeline {
         mesh_pipeline: MeshPipeline,
         shader: Handle<Shader>,
     }
+
     impl FromWorld for DebugLinePipeline {
         fn from_world(render_world: &mut World) -> Self {
             DebugLinePipeline {
@@ -176,23 +176,32 @@ pub mod r3d {
 
 pub mod r2d {
     use bevy::{
-        prelude::*,
         asset::Handle,
-        utils::FloatOrd,
         core_pipeline::core_2d::Transparent2d,
+        prelude::*,
         render::{
-            mesh::MeshVertexBufferLayout, render_asset::RenderAssets,
+            mesh::MeshVertexBufferLayout,
+            render_asset::RenderAssets,
             render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
             render_resource::{
-                BlendState, ColorTargetState, ColorWrites, FragmentState,
-                FrontFace, MultisampleState, PipelineCache, PolygonMode,
-                PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor, Shader,
-                SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
-                TextureFormat, VertexState
-            }, texture::BevyDefault, view::{Msaa, VisibleEntities}}, sprite::{DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform, SetMesh2dBindGroup, SetMesh2dViewBindGroup}};
+                BlendState, ColorTargetState, ColorWrites, FragmentState, FrontFace,
+                MultisampleState, PipelineCache, PolygonMode, PrimitiveState, PrimitiveTopology,
+                RenderPipelineDescriptor, Shader, SpecializedMeshPipeline,
+                SpecializedMeshPipelineError, SpecializedMeshPipelines, TextureFormat, VertexState,
+            },
+            texture::BevyDefault,
+            view::{Msaa, VisibleEntities},
+        },
+        sprite::{
+            DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform,
+            SetMesh2dBindGroup, SetMesh2dViewBindGroup,
+        },
+        utils::FloatOrd,
+    };
 
     use crate::{RenderDebugLinesMesh, DEBUG_LINES_SHADER_HANDLE};
 
+    #[derive(Resource)]
     pub(crate) struct DebugLinePipeline {
         mesh_pipeline: Mesh2dPipeline,
         shader: Handle<Shader>,

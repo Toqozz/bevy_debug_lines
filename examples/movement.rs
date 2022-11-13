@@ -17,13 +17,13 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn_bundle(Camera3dBundle {
+    commands.spawn(Camera3dBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
         ..default()
     });
 
-    commands
-        .spawn_bundle(PbrBundle {
+    commands.spawn((
+        PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Cube { size: 0.1 })),
             material: materials.add(StandardMaterial {
                 base_color: Color::RED,
@@ -31,12 +31,14 @@ fn setup(
             }),
             transform: Transform::from_xyz(0.0, 0.0, -0.5),
             ..Default::default()
-        })
-        .insert(MoveWithMouse);
+        },
+        MoveWithMouse,
+    ));
 }
 
 #[derive(Component)]
 struct MoveWithMouse;
+
 fn move_with_mouse(
     mut mouse_motion: EventReader<MouseMotion>,
     mut lines: ResMut<DebugLines>,

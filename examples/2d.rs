@@ -16,7 +16,7 @@ fn setup(mut commands: Commands) {
     let mut camera = Camera2dBundle::default();
     camera.transform = Transform::from_translation(Vec3::new(0.0, 0.0, 5.0));
 
-    commands.spawn_bundle(camera);
+    commands.spawn(camera);
 }
 
 fn demo(mut lines: ResMut<DebugLines>) {
