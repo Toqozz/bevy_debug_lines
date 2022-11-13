@@ -13,8 +13,8 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
-    commands.spawn_bundle(Camera3dBundle {
-        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 0.0, 5.0),
         ..default()
     });
     // A line that stays on screen 9 seconds
@@ -28,7 +28,7 @@ fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
 }
 
 fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
-    let seconds = time.seconds_since_startup() as f32;
+    let seconds = time.elapsed_seconds();
 
     lines.line(
         Vec3::new(-1.0, f32::sin(seconds), 0.0),

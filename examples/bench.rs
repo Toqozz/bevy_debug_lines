@@ -7,11 +7,13 @@ use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            present_mode: PresentMode::Immediate,
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                present_mode: PresentMode::Immediate,
+                ..Default::default()
+            },
             ..Default::default()
-        })
-        .add_plugins(DefaultPlugins)
+        }))
         .add_plugin(DebugLinesPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin {
@@ -25,8 +27,8 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn_bundle(Camera3dBundle {
-        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 5.0)),
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 0.0, 5.0),
         ..default()
     });
 }
@@ -38,7 +40,7 @@ fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
     const RADIUS: f32 = 1.5;
     const DURATION: f32 = 0.0;
 
-    let seconds = 0.5 * time.seconds_since_startup() as f32;
+    let seconds = 0.5 * time.elapsed_seconds();
 
     for i in 0..MAX_LINES {
         let angle = (i as f32 / MAX_LINES as f32) * 180.0;
