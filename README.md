@@ -114,6 +114,7 @@ This is technically a non-breaking change (i.e. your code will still compile) be
 
 | bevy | bevy_prototype_debug_lines |
 | --- | --- |
+| 0.9 | 0.9 |
 | 0.8 | 0.8 |
 | 0.7 | 0.7 |
 | 0.6 | 0.6 |
