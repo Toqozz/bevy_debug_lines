@@ -17,9 +17,9 @@ This plugin uses a shader and sends individual points to the GPU, which then mov
 Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
 ```toml
 [dependencies]
-bevy_prototype_debug_lines = "0.8"
+bevy_prototype_debug_lines = "0.9"
 # Or, for 3d:
-# bevy_prototype_debug_lines = { version = "0.8", features = ["3d"] }
+# bevy_prototype_debug_lines = { version = "0.9", features = ["3d"] }
 ```
 
 Add the plugin in your `App::new()` phase:
@@ -84,7 +84,7 @@ your game. Is it a 3d game? If so, you should add the
 look like this:
 
 ```toml
-bevy_prototype_debug_lines = { version = "0.8", features = ["3d"] }
+bevy_prototype_debug_lines = { version = "0.9", features = ["3d"] }
 ```
 
 
