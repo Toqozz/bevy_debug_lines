@@ -12,11 +12,12 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let mut camera = Camera2dBundle::default();
-    camera.transform = Transform::from_translation(Vec3::new(0.0, 0.0, 5.0));
+    commands.spawn(Camera2dBundle {
+        transform: Transform::from_xyz(0.0, 0.0, 5.0),
+        ..Default::default()
+    });
 
-    commands.spawn_bundle(camera);
-    commands.spawn_bundle(SpriteBundle {
+    commands.spawn(SpriteBundle {
         texture: asset_server.load("icon.png"),
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.3)),
         ..default()
