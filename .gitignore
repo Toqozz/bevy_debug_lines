@@ -10,3 +10,5 @@ Cargo.lock
 **/*.rs.bk
 
 upgrade_guide
+
+.idea/*
