@@ -2,9 +2,13 @@ use std::marker::PhantomData;
 
 use crate::DebugLines;
 
+pub use self::cuboid::Cuboid;
 pub use self::line::Line;
+pub use self::rect::Rect;
 
+mod cuboid;
 mod line;
+mod rect;
 
 pub(crate) trait ToMeshAttributes {
     fn positions(&self) -> Vec<[f32; 3]>;
@@ -14,31 +18,41 @@ pub(crate) trait ToMeshAttributes {
 }
 
 pub enum Shape {
+    Cuboid(Cuboid),
     Line(Line),
+    Rect(Rect),
 }
 
 impl ToMeshAttributes for Shape {
     fn positions(&self) -> Vec<[f32; 3]> {
         match self {
-            Shape::Line(line) => line.positions(),
+            Shape::Cuboid(s) => s.positions(),
+            Shape::Line(s) => s.positions(),
+            Shape::Rect(s) => s.positions(),
         }
     }
 
     fn colors(&self) -> Vec<[f32; 4]> {
         match self {
-            Shape::Line(line) => line.colors(),
+            Shape::Cuboid(s) => s.colors(),
+            Shape::Line(s) => s.colors(),
+            Shape::Rect(s) => s.colors(),
         }
     }
 
     fn duration(&self) -> f32 {
         match self {
-            Shape::Line(line) => line.duration(),
+            Shape::Cuboid(s) => s.duration(),
+            Shape::Line(s) => s.duration(),
+            Shape::Rect(s) => s.duration(),
         }
     }
 
     fn update(&mut self, dt: f32) {
         match self {
-            Shape::Line(line) => line.update(dt),
+            Shape::Cuboid(s) => s.update(dt),
+            Shape::Line(s) => s.update(dt),
+            Shape::Rect(s) => s.update(dt),
         }
     }
 }

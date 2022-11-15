@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use bevy::{
     asset::{Assets, HandleUntyped},
     pbr::{NotShadowCaster, NotShadowReceiver},
@@ -279,8 +277,16 @@ impl DebugLines {
         ShapeHandle::new(self, index)
     }
 
+    pub fn cuboid(&mut self, position: Vec3, size: Vec3) -> ShapeHandle<'_, shapes::Cuboid> {
+        self.add(shapes::Cuboid::new(position, size))
+    }
+
     pub fn line(&mut self, start: Vec3, end: Vec3) -> ShapeHandle<'_, shapes::Line> {
         self.add(shapes::Line::new(start, end))
+    }
+
+    pub fn rect(&mut self, position: Vec3, size: Vec2) -> ShapeHandle<'_, shapes::Rect> {
+        self.add(shapes::Rect::new(position, size))
     }
 
     fn positions(&self) -> Vec<[f32; 3]> {
