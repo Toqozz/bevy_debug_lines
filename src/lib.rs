@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bevy::{
     asset::{Assets, HandleUntyped},
     pbr::{NotShadowCaster, NotShadowReceiver},
@@ -12,8 +14,10 @@ use bevy::{
         Extract,
     },
 };
+use shape::ToMeshAttributes;
 
 mod render_dim;
+mod shape;
 
 // This module exists to "isolate" the `#[cfg]` attributes to this part of the
 // code. Otherwise, we would pollute the code with a lot of feature
@@ -186,7 +190,7 @@ fn update(
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
             if let Some(new_content) = lines
-                .positions
+                .positions()
                 .chunks(MAX_POINTS_PER_MESH)
                 .nth(debug_lines_idx.0)
             {
@@ -197,7 +201,7 @@ fn update(
         if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
             cbuffer.clear();
             if let Some(new_content) = lines
-                .colors
+                .colors()
                 .chunks(MAX_POINTS_PER_MESH)
                 .nth(debug_lines_idx.0)
             {
@@ -251,7 +255,7 @@ struct RenderDebugLinesMesh;
 ///         Vec3::new(1.0, 0.0, 0.0),
 ///         0.0,
 ///         Color::WHITE
-///     );
+///     );`
 ///     lines.line_gradient(
 ///         Vec3::new(-1.0, -1.0, 0.0),
 ///         Vec3::new(1.0, -1.0, 0.0),
@@ -262,9 +266,7 @@ struct RenderDebugLinesMesh;
 /// ```
 #[derive(Resource, Default)]
 pub struct DebugLines {
-    pub positions: Vec<[f32; 3]>,
-    pub colors: Vec<[f32; 4]>,
-    pub durations: Vec<f32>,
+    pub(crate) shapes: Vec<shape::Shape>,
 }
 
 impl DebugLines {
@@ -276,58 +278,29 @@ impl DebugLines {
     /// * `end` - The end of the line in world space
     /// * `duration` - Duration (in seconds) that the line should show for -- a value of
     ///   zero will show the line for 1 frame.
-    pub fn line(&mut self, start: Vec3, end: Vec3, duration: f32) {
-        self.line_colored(start, end, duration, Color::WHITE);
-    }
-
-    /// Draw a line in world space with a specified color, or update an existing line
-    ///
-    /// # Arguments
-    ///
-    /// * `start` - The start of the line in world space
-    /// * `end` - The end of the line in world space
-    /// * `duration` - Duration (in seconds) that the line should show for -- a value of
-    ///   zero will show the line for 1 frame.
-    /// * `color` - Line color
-    pub fn line_colored(&mut self, start: Vec3, end: Vec3, duration: f32, color: Color) {
-        self.line_gradient(start, end, duration, color, color);
-    }
-
-    /// Draw a line in world space with a specified gradient color, or update an existing line
-    ///
-    /// # Arguments
-    ///
-    /// * `start` - The start of the line in world space
-    /// * `end` - The end of the line in world space
-    /// * `duration` - Duration (in seconds) that the line should show for -- a value of
-    ///   zero will show the line for 1 frame.
-    /// * `start_color` - Line color
-    /// * `end_color` - Line color
-    pub fn line_gradient(
-        &mut self,
-        start: Vec3,
-        end: Vec3,
-        duration: f32,
-        start_color: Color,
-        end_color: Color,
-    ) {
-        if self.positions.len() >= MAX_POINTS {
-            warn!("Tried to add a new line when existing number of lines was already at maximum, ignoring.");
-            return;
+    pub fn line(&mut self, start: Vec3, end: Vec3) -> shape::ShapeHandle<'_, shape::Line> {
+        let index = self.shapes.len();
+        self.shapes
+            .push(shape::Shape::Line(shape::Line::new(start, end)));
+        shape::ShapeHandle {
+            debug_lines: self,
+            index,
+            _ty: PhantomData,
         }
-
-        self.positions.push(start.into());
-        self.positions.push(end.into());
-        self.colors.push(start_color.as_linear_rgba_f32());
-        self.colors.push(end_color.as_linear_rgba_f32());
-        self.durations.push(duration);
     }
 
-    // Returns the indices of the start and end positions of the nth line.
-    // The indices can also be used to access color data.
-    fn nth(&self, idx: usize) -> (usize, usize) {
-        let i = idx * 2;
-        (i, i + 1)
+    fn positions(&self) -> Vec<[f32; 3]> {
+        self.shapes
+            .iter()
+            .flat_map(|shape| shape.positions())
+            .collect()
+    }
+
+    fn colors(&self) -> Vec<[f32; 4]> {
+        self.shapes
+            .iter()
+            .flat_map(|shape| shape.colors())
+            .collect()
     }
 
     // Prepare [`ImmediateLinesStorage`] and [`RetainedLinesStorage`] for next
@@ -337,27 +310,19 @@ impl DebugLines {
     fn update(&mut self, dt: f32) {
         // TODO: an actual line counter wouldn't hurt.
         let mut i = 0;
-        let mut len = self.durations.len();
+        let mut len = self.shapes.len();
         while i != len {
-            self.durations[i] -= dt;
+            self.shapes[i].update(dt);
             // <= instead of < is fine here because this is always called AFTER sending the
             // data to the mesh, so we're guaranteed at least a frame here.
-            if self.durations[i] <= 0.0 {
-                let (cur_s, cur_e) = self.nth(i);
-                let (last_s, last_e) = self.nth(len - 1);
-                self.positions.swap(cur_s, last_s);
-                self.positions.swap(cur_e, last_e);
-                self.colors.swap(cur_s, last_s);
-                self.colors.swap(cur_e, last_e);
-                self.durations.swap(i, len - 1);
+            if self.shapes[i].duration() <= 0.0 {
+                self.shapes.swap(i, len - 1);
                 len -= 1;
             } else {
                 i += 1;
             }
         }
 
-        self.positions.truncate(len * 2);
-        self.colors.truncate(len * 2);
-        self.durations.truncate(len);
+        self.shapes.truncate(len);
     }
 }

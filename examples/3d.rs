@@ -18,13 +18,10 @@ fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
         ..default()
     });
     // A line that stays on screen 9 seconds
-    lines.line_gradient(
-        Vec3::new(1.0, -1.0, -1.0),
-        Vec3::new(-1.0, 1.0, 1.0),
-        9.0,
-        Color::CYAN,
-        Color::MIDNIGHT_BLUE,
-    );
+    lines
+        .line(Vec3::new(1.0, -1.0, -1.0), Vec3::new(-1.0, 1.0, 1.0))
+        .duration(9.0)
+        .gradient(Color::CYAN, Color::MIDNIGHT_BLUE);
 }
 
 fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
@@ -33,19 +30,17 @@ fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
     lines.line(
         Vec3::new(-1.0, f32::sin(seconds), 0.0),
         Vec3::new(1.0, f32::sin(seconds + 3.14), 0.0),
-        0.0,
     );
-    lines.line_colored(
-        Vec3::new(f32::sin(seconds), -1.0, 0.0),
-        Vec3::new(f32::sin(seconds + 3.14), 1.0, 0.0),
-        0.0,
-        Color::WHITE,
-    );
-    lines.line_gradient(
-        Vec3::new(-1.0, -1.0, f32::sin(seconds)),
-        Vec3::new(1.0, 1.0, f32::sin(seconds + 3.14)),
-        0.0,
-        Color::GOLD,
-        Color::PINK,
-    );
+    lines
+        .line(
+            Vec3::new(f32::sin(seconds), -1.0, 0.0),
+            Vec3::new(f32::sin(seconds + 3.14), 1.0, 0.0),
+        )
+        .color(Color::WHITE);
+    lines
+        .line(
+            Vec3::new(-1.0, -1.0, f32::sin(seconds)),
+            Vec3::new(1.0, 1.0, f32::sin(seconds + 3.14)),
+        )
+        .gradient(Color::GOLD, Color::PINK);
 }
