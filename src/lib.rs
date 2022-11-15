@@ -14,10 +14,10 @@ use bevy::{
         Extract,
     },
 };
-use shape::ToMeshAttributes;
+use shapes::{Shape, ShapeHandle, ToMeshAttributes};
 
 mod render_dim;
-mod shape;
+mod shapes;
 
 // This module exists to "isolate" the `#[cfg]` attributes to this part of the
 // code. Otherwise, we would pollute the code with a lot of feature
@@ -266,27 +266,21 @@ struct RenderDebugLinesMesh;
 /// ```
 #[derive(Resource, Default)]
 pub struct DebugLines {
-    pub(crate) shapes: Vec<shape::Shape>,
+    pub(crate) shapes: Vec<Shape>,
 }
 
 impl DebugLines {
-    /// Draw a line in world space, or update an existing line
-    ///
-    /// # Arguments
-    ///
-    /// * `start` - The start of the line in world space
-    /// * `end` - The end of the line in world space
-    /// * `duration` - Duration (in seconds) that the line should show for -- a value of
-    ///   zero will show the line for 1 frame.
-    pub fn line(&mut self, start: Vec3, end: Vec3) -> shape::ShapeHandle<'_, shape::Line> {
+    pub fn add<S>(&mut self, shape: S) -> ShapeHandle<'_, S>
+    where
+        S: Into<Shape>,
+    {
         let index = self.shapes.len();
-        self.shapes
-            .push(shape::Shape::Line(shape::Line::new(start, end)));
-        shape::ShapeHandle {
-            debug_lines: self,
-            index,
-            _ty: PhantomData,
-        }
+        self.shapes.push(shape.into());
+        ShapeHandle::new(self, index)
+    }
+
+    pub fn line(&mut self, start: Vec3, end: Vec3) -> ShapeHandle<'_, shapes::Line> {
+        self.add(shapes::Line::new(start, end))
     }
 
     fn positions(&self) -> Vec<[f32; 3]> {

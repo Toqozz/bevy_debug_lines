@@ -1,51 +1,6 @@
-use std::marker::PhantomData;
-
 use bevy::prelude::*;
 
-use crate::DebugLines;
-
-pub(crate) trait ToMeshAttributes {
-    fn positions(&self) -> Vec<[f32; 3]>;
-    fn colors(&self) -> Vec<[f32; 4]>;
-    fn duration(&self) -> f32;
-    fn update(&mut self, dt: f32);
-}
-
-pub(crate) enum Shape {
-    Line(Line),
-}
-
-impl ToMeshAttributes for Shape {
-    fn positions(&self) -> Vec<[f32; 3]> {
-        match self {
-            Shape::Line(line) => line.positions(),
-        }
-    }
-
-    fn colors(&self) -> Vec<[f32; 4]> {
-        match self {
-            Shape::Line(line) => line.colors(),
-        }
-    }
-
-    fn duration(&self) -> f32 {
-        match self {
-            Shape::Line(line) => line.duration(),
-        }
-    }
-
-    fn update(&mut self, dt: f32) {
-        match self {
-            Shape::Line(line) => line.update(dt),
-        }
-    }
-}
-
-pub struct ShapeHandle<'a, T> {
-    pub(crate) debug_lines: &'a mut DebugLines,
-    pub(crate) index: usize,
-    pub(crate) _ty: PhantomData<T>,
-}
+use super::{Shape, ShapeHandle, ToMeshAttributes};
 
 pub struct Line {
     pub start: Vec3,
@@ -74,6 +29,12 @@ impl Default for Line {
             end_color: Color::WHITE,
             duration: 0.0,
         }
+    }
+}
+
+impl From<Line> for Shape {
+    fn from(line: Line) -> Self {
+        Shape::Line(line)
     }
 }
 
