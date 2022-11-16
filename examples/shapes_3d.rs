@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
+use bevy_prototype_debug_lines::{DebugLinesPlugin, DebugShapes};
 
 fn main() {
     App::new()
@@ -12,17 +12,17 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
+fn setup(mut commands: Commands, mut shapes: ResMut<DebugShapes>) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0.0, 0.0, 5.0),
         ..default()
     });
 }
 
-fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
+fn demo(time: Res<Time>, mut shapes: ResMut<DebugShapes>) {
     let seconds = time.elapsed_seconds();
 
-    lines
+    shapes
         .cuboid(Vec3::new(1.0, 0.0, 0.0), Vec3::new(1.0, 1.0, 1.0))
         .rotation(Quat::from_axis_angle(
             Vec3::X,

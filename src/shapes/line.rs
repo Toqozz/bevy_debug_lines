@@ -53,10 +53,6 @@ impl ToMeshAttributes for Line {
     fn duration(&self) -> f32 {
         self.duration
     }
-
-    fn update(&mut self, dt: f32) {
-        self.duration -= dt
-    }
 }
 
 impl<'a> ShapeHandle<'a, Line> {
@@ -65,7 +61,7 @@ impl<'a> ShapeHandle<'a, Line> {
     }
 
     pub fn gradient(self, start_color: Color, end_color: Color) -> Self {
-        if let Shape::Line(line) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Line(line) = &mut self.shapes.shapes[self.index] {
             line.start_color = start_color;
             line.end_color = end_color;
         }
@@ -73,7 +69,7 @@ impl<'a> ShapeHandle<'a, Line> {
     }
 
     pub fn duration(self, duration: f32) -> Self {
-        if let Shape::Line(line) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Line(line) = &mut self.shapes.shapes[self.index] {
             line.duration = duration;
         }
         self

@@ -59,5 +59,9 @@ name = "shapes_3d"
 required-features = ["example_deps"]
 
 [[example]]
+name = "shapes_bench"
+required-features = ["example_deps"]
+
+[[example]]
 name = "sprite"
 required-features = ["example_deps_2d"]

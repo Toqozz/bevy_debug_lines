@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
+use bevy_prototype_debug_lines::{DebugLinesPlugin, DebugShapes};
 
 fn main() {
     App::new()
@@ -19,8 +19,8 @@ fn setup(mut commands: Commands) {
     });
 }
 
-fn demo(mut lines: ResMut<DebugLines>) {
-    lines
+fn demo(mut shapes: ResMut<DebugShapes>) {
+    shapes
         .rect(Vec3::new(100.0, 0.0, 0.0), Vec2::new(100.0, 100.0))
         .angle(std::f32::consts::FRAC_PI_4)
         .color(Color::RED);

@@ -62,36 +62,32 @@ impl ToMeshAttributes for Rect {
     fn duration(&self) -> f32 {
         self.duration
     }
-
-    fn update(&mut self, dt: f32) {
-        self.duration -= dt
-    }
 }
 
 impl<'a> ShapeHandle<'a, Rect> {
     pub fn rotation(self, rotation: Quat) -> Self {
-        if let Shape::Rect(rect) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Rect(rect) = &mut self.shapes.shapes[self.index] {
             rect.rotation = rotation;
         }
         self
     }
 
     pub fn angle(self, angle: f32) -> Self {
-        if let Shape::Rect(rect) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Rect(rect) = &mut self.shapes.shapes[self.index] {
             rect.rotation = Quat::from_axis_angle(Vec3::Z, angle);
         }
         self
     }
 
     pub fn color(self, color: Color) -> Self {
-        if let Shape::Rect(rect) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Rect(rect) = &mut self.shapes.shapes[self.index] {
             rect.color = color;
         }
         self
     }
 
     pub fn duration(self, duration: f32) -> Self {
-        if let Shape::Rect(rect) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Rect(rect) = &mut self.shapes.shapes[self.index] {
             rect.duration = duration;
         }
         self

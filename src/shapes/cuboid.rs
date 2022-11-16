@@ -73,29 +73,25 @@ impl ToMeshAttributes for Cuboid {
     fn duration(&self) -> f32 {
         self.duration
     }
-
-    fn update(&mut self, dt: f32) {
-        self.duration -= dt
-    }
 }
 
 impl<'a> ShapeHandle<'a, Cuboid> {
     pub fn rotation(self, rotation: Quat) -> Self {
-        if let Shape::Cuboid(cuboid) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Cuboid(cuboid) = &mut self.shapes.shapes[self.index] {
             cuboid.rotation = rotation;
         }
         self
     }
 
     pub fn color(self, color: Color) -> Self {
-        if let Shape::Cuboid(cuboid) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Cuboid(cuboid) = &mut self.shapes.shapes[self.index] {
             cuboid.color = color;
         }
         self
     }
 
     pub fn duration(self, duration: f32) -> Self {
-        if let Shape::Cuboid(cuboid) = &mut self.debug_lines.shapes[self.index] {
+        if let Shape::Cuboid(cuboid) = &mut self.shapes.shapes[self.index] {
             cuboid.duration = duration;
         }
         self

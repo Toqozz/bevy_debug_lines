@@ -20,23 +20,36 @@ fn setup(mut commands: Commands) {
 }
 
 fn demo(mut lines: ResMut<DebugLines>) {
-    lines.line(Vec3::new(-400.0, 200.0, 0.0), Vec3::new(400.0, 200.0, 0.0));
-    lines
-        .line(Vec3::new(-400.0, 0.0, 0.0), Vec3::new(400.0, 0.0, 0.0))
-        .duration(0.9)
-        .color(Color::GREEN);
-    lines
-        .line(
-            Vec3::new(-400.0, -200.0, 0.0),
-            Vec3::new(400.0, -200.0, 0.0),
-        )
-        .gradient(Color::WHITE, Color::PINK);
-    lines
-        .line(Vec3::new(-100.0, 100.0, 0.0), Vec3::new(100.0, -100.0, 0.0))
-        .duration(0.8)
-        .gradient(Color::WHITE, Color::PINK);
-    lines
-        .line(Vec3::new(-100.0, -100.0, 0.0), Vec3::new(100.0, 100.0, 0.0))
-        .duration(0.3)
-        .gradient(Color::MIDNIGHT_BLUE, Color::YELLOW_GREEN);
+    lines.line(
+        Vec3::new(-400.0, 200.0, 0.0),
+        Vec3::new(400.0, 200.0, 0.0),
+        0.0,
+    );
+    lines.line_colored(
+        Vec3::new(-400.0, 0.0, 0.0),
+        Vec3::new(400.0, 0.0, 0.0),
+        0.9,
+        Color::GREEN,
+    );
+    lines.line_gradient(
+        Vec3::new(-400.0, -200.0, 0.0),
+        Vec3::new(400.0, -200.0, 0.0),
+        0.0,
+        Color::WHITE,
+        Color::PINK,
+    );
+    lines.line_gradient(
+        Vec3::new(-100.0, 100.0, 0.0),
+        Vec3::new(100.0, -100.0, 0.0),
+        0.8,
+        Color::WHITE,
+        Color::PINK,
+    );
+    lines.line_gradient(
+        Vec3::new(-100.0, -100.0, 0.0),
+        Vec3::new(100.0, 100.0, 0.0),
+        0.3,
+        Color::MIDNIGHT_BLUE,
+        Color::YELLOW_GREEN,
+    );
 }
