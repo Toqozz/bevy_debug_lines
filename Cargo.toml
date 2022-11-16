@@ -16,6 +16,7 @@ exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 bevy = { version = "0.9", default-features = false, features = [ "bevy_core_pipeline", "bevy_render", "bevy_pbr", "bevy_sprite", "bevy_asset" ] }
 
 [features]
+default = ["shapes"]
 example_deps_2d = [
     "bevy/bevy_winit",
     "bevy/bevy_gltf",
