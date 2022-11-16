@@ -13,10 +13,13 @@ use bevy::{
     },
 };
 
+#[cfg(feature = "shapes")]
 pub use crate::shapes::DebugShapes;
 
-mod render_dim;
+#[cfg(feature = "shapes")]
 mod shapes;
+
+mod render_dim;
 
 // This module exists to "isolate" the `#[cfg]` attributes to this part of the
 // code. Otherwise, we would pollute the code with a lot of feature
@@ -116,11 +119,13 @@ impl Plugin for DebugLinesPlugin {
             Shader::from_wgsl(dim::SHADER_FILE),
         );
 
-        app.init_resource::<DebugLines>()
-            .init_resource::<DebugShapes>();
+        app.init_resource::<DebugLines>();
 
         app.add_startup_system(setup)
-            .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"))
+            .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
+
+        #[cfg(feature = "shapes")]
+        app.init_resource::<DebugShapes>()
             .add_system_to_stage(CoreStage::PostUpdate, shapes::update.before(update));
 
         app.sub_app_mut(RenderApp)

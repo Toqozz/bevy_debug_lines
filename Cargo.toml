@@ -29,6 +29,7 @@ example_deps = [
     "3d",
 ]
 3d = []
+shapes = []
 
 [[example]]
 name = "3d"
@@ -52,15 +53,15 @@ required-features = ["example_deps"]
 
 [[example]]
 name = "shapes_2d"
-required-features = ["example_deps_2d"]
+required-features = ["shapes", "example_deps_2d"]
 
 [[example]]
 name = "shapes_3d"
-required-features = ["example_deps"]
+required-features = ["shapes", "example_deps"]
 
 [[example]]
 name = "shapes_bench"
-required-features = ["example_deps"]
+required-features = ["shapes", "example_deps"]
 
 [[example]]
 name = "sprite"
