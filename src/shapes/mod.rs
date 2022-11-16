@@ -45,26 +45,14 @@ impl DebugShapes {
 }
 
 pub(crate) fn update(mut lines: ResMut<DebugLines>, mut shapes: ResMut<DebugShapes>) {
-    if shapes.shapes.len() > 0 && lines.positions.len() >= MAX_POINTS {
-        warn!("Tried to add a new line when existing number of lines was already at maximum, ignoring.");
-    } else {
-        lines
-            .positions
-            .extend(shapes.shapes.iter().flat_map(|shape| shape.positions()));
-        lines
-            .colors
-            .extend(shapes.shapes.iter().flat_map(|shape| shape.colors()));
-        lines
-            .durations
-            .extend(shapes.shapes.iter().map(|shape| shape.duration()));
+    for shape in &shapes.shapes {
+        shape.add_lines(&mut lines);
     }
     shapes.shapes.clear();
 }
 
-pub(crate) trait ToMeshAttributes {
-    fn positions(&self) -> Vec<[f32; 3]>;
-    fn colors(&self) -> Vec<[f32; 4]>;
-    fn duration(&self) -> f32;
+pub(crate) trait AddLines {
+    fn add_lines(&self, lines: &mut DebugLines);
 }
 
 pub enum Shape {
@@ -73,28 +61,12 @@ pub enum Shape {
     Rect(Rect),
 }
 
-impl ToMeshAttributes for Shape {
-    fn positions(&self) -> Vec<[f32; 3]> {
+impl AddLines for Shape {
+    fn add_lines(&self, lines: &mut DebugLines) {
         match self {
-            Shape::Cuboid(s) => s.positions(),
-            Shape::Line(s) => s.positions(),
-            Shape::Rect(s) => s.positions(),
-        }
-    }
-
-    fn colors(&self) -> Vec<[f32; 4]> {
-        match self {
-            Shape::Cuboid(s) => s.colors(),
-            Shape::Line(s) => s.colors(),
-            Shape::Rect(s) => s.colors(),
-        }
-    }
-
-    fn duration(&self) -> f32 {
-        match self {
-            Shape::Cuboid(s) => s.duration(),
-            Shape::Line(s) => s.duration(),
-            Shape::Rect(s) => s.duration(),
+            Shape::Cuboid(s) => s.add_lines(lines),
+            Shape::Line(s) => s.add_lines(lines),
+            Shape::Rect(s) => s.add_lines(lines),
         }
     }
 }

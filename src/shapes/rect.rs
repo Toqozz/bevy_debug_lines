@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Shape, ShapeHandle, ToMeshAttributes};
+use super::{AddLines, Shape, ShapeHandle};
 
 pub struct Rect {
     pub position: Vec3,
@@ -38,8 +38,8 @@ impl From<Rect> for Shape {
     }
 }
 
-impl ToMeshAttributes for Rect {
-    fn positions(&self) -> Vec<[f32; 3]> {
+impl AddLines for Rect {
+    fn add_lines(&self, lines: &mut crate::DebugLines) {
         // verts in local space
         let v1 = Vec3::new(-self.extent.x, -self.extent.y, 0.0);
         let v2 = Vec3::new(self.extent.x, -self.extent.y, 0.0);
@@ -47,20 +47,15 @@ impl ToMeshAttributes for Rect {
         let v4 = Vec3::new(-self.extent.x, self.extent.y, 0.0);
 
         // verts in global space
-        let v1 = (self.position + self.rotation.mul_vec3(v1)).into();
-        let v2 = (self.position + self.rotation.mul_vec3(v2)).into();
-        let v3 = (self.position + self.rotation.mul_vec3(v3)).into();
-        let v4 = (self.position + self.rotation.mul_vec3(v4)).into();
+        let v1 = self.position + self.rotation.mul_vec3(v1);
+        let v2 = self.position + self.rotation.mul_vec3(v2);
+        let v3 = self.position + self.rotation.mul_vec3(v3);
+        let v4 = self.position + self.rotation.mul_vec3(v4);
 
-        vec![v1, v2, v2, v3, v3, v4, v4, v1]
-    }
-
-    fn colors(&self) -> Vec<[f32; 4]> {
-        vec![self.color.as_linear_rgba_f32(); 8]
-    }
-
-    fn duration(&self) -> f32 {
-        self.duration
+        lines.line_colored(v1, v2, self.duration, self.color);
+        lines.line_colored(v2, v3, self.duration, self.color);
+        lines.line_colored(v3, v4, self.duration, self.color);
+        lines.line_colored(v4, v1, self.duration, self.color);
     }
 }
 

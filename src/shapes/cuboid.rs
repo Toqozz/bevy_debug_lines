@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Shape, ShapeHandle, ToMeshAttributes};
+use super::{AddLines, Shape, ShapeHandle};
 
 pub struct Cuboid {
     pub position: Vec3,
@@ -38,8 +38,8 @@ impl From<Cuboid> for Shape {
     }
 }
 
-impl ToMeshAttributes for Cuboid {
-    fn positions(&self) -> Vec<[f32; 3]> {
+impl AddLines for Cuboid {
+    fn add_lines(&self, lines: &mut crate::DebugLines) {
         // verts in local space
         let v1 = Vec3::new(-self.extent.x, -self.extent.y, -self.extent.z);
         let v2 = Vec3::new(self.extent.x, -self.extent.y, -self.extent.z);
@@ -51,27 +51,27 @@ impl ToMeshAttributes for Cuboid {
         let v8 = Vec3::new(-self.extent.x, self.extent.y, self.extent.z);
 
         // verts in global space
-        let v1 = (self.position + self.rotation.mul_vec3(v1)).into();
-        let v2 = (self.position + self.rotation.mul_vec3(v2)).into();
-        let v3 = (self.position + self.rotation.mul_vec3(v3)).into();
-        let v4 = (self.position + self.rotation.mul_vec3(v4)).into();
-        let v5 = (self.position + self.rotation.mul_vec3(v5)).into();
-        let v6 = (self.position + self.rotation.mul_vec3(v6)).into();
-        let v7 = (self.position + self.rotation.mul_vec3(v7)).into();
-        let v8 = (self.position + self.rotation.mul_vec3(v8)).into();
+        let v1 = self.position + self.rotation.mul_vec3(v1);
+        let v2 = self.position + self.rotation.mul_vec3(v2);
+        let v3 = self.position + self.rotation.mul_vec3(v3);
+        let v4 = self.position + self.rotation.mul_vec3(v4);
+        let v5 = self.position + self.rotation.mul_vec3(v5);
+        let v6 = self.position + self.rotation.mul_vec3(v6);
+        let v7 = self.position + self.rotation.mul_vec3(v7);
+        let v8 = self.position + self.rotation.mul_vec3(v8);
 
-        vec![
-            v1, v2, v2, v3, v3, v4, v4, v1, v5, v6, v6, v7, v7, v8, v8, v5, v1, v5, v2, v6, v3, v7,
-            v4, v8,
-        ]
-    }
-
-    fn colors(&self) -> Vec<[f32; 4]> {
-        vec![self.color.as_linear_rgba_f32(); 24]
-    }
-
-    fn duration(&self) -> f32 {
-        self.duration
+        lines.line_colored(v1, v2, self.duration, self.color);
+        lines.line_colored(v2, v3, self.duration, self.color);
+        lines.line_colored(v3, v4, self.duration, self.color);
+        lines.line_colored(v4, v1, self.duration, self.color);
+        lines.line_colored(v5, v6, self.duration, self.color);
+        lines.line_colored(v6, v7, self.duration, self.color);
+        lines.line_colored(v7, v8, self.duration, self.color);
+        lines.line_colored(v8, v5, self.duration, self.color);
+        lines.line_colored(v1, v5, self.duration, self.color);
+        lines.line_colored(v2, v6, self.duration, self.color);
+        lines.line_colored(v3, v7, self.duration, self.color);
+        lines.line_colored(v4, v8, self.duration, self.color);
     }
 }
 

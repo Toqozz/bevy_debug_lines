@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Shape, ShapeHandle, ToMeshAttributes};
+use super::{AddLines, Shape, ShapeHandle};
 
 pub struct Line {
     pub start: Vec3,
@@ -38,20 +38,15 @@ impl From<Line> for Shape {
     }
 }
 
-impl ToMeshAttributes for Line {
-    fn positions(&self) -> Vec<[f32; 3]> {
-        vec![self.start.into(), self.end.into()]
-    }
-
-    fn colors(&self) -> Vec<[f32; 4]> {
-        vec![
-            self.start_color.as_linear_rgba_f32(),
-            self.end_color.as_linear_rgba_f32(),
-        ]
-    }
-
-    fn duration(&self) -> f32 {
-        self.duration
+impl AddLines for Line {
+    fn add_lines(&self, lines: &mut crate::DebugLines) {
+        lines.line_gradient(
+            self.start,
+            self.end,
+            self.duration,
+            self.start_color,
+            self.end_color,
+        )
     }
 }
 

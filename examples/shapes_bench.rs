@@ -22,7 +22,6 @@ fn main() {
         })
         .add_startup_system(setup)
         .add_system(demo_circle)
-        //.add_system(demo_block)
         .run();
 }
 
@@ -65,29 +64,6 @@ fn demo_circle(time: Res<Time>, mut shapes: ResMut<DebugShapes>) {
 
         let start_color = Color::rgba(start.x, start.y, 0.5, start.z.max(0.5));
         let end_color = Color::rgba(end.x, end.y, 0.5, end.z.max(0.5));
-
-        shapes
-            .line(start, end)
-            .duration(DURATION)
-            .gradient(start_color, end_color);
-    }
-}
-
-fn _demo_block(mut shapes: DebugShapes) {
-    use bevy_prototype_debug_lines::MAX_LINES;
-
-    const DURATION: f32 = 10.0;
-    const X: f32 = 2.0;
-    const Y: f32 = 1.0;
-
-    for i in 0..MAX_LINES {
-        let percent = i as f32 / MAX_LINES as f32;
-
-        let start = Vec3::lerp(Vec3::new(-X, Y, 0.0), Vec3::new(-X, -Y, 0.0), percent);
-        let end = Vec3::lerp(Vec3::new(X, Y, 0.0), Vec3::new(X, -Y, 0.0), percent);
-
-        let start_color = Color::rgba(start.x, start.y, 0.5, 1.0);
-        let end_color = Color::rgba(end.x, end.y, 0.5, 1.0);
 
         shapes
             .line(start, end)
