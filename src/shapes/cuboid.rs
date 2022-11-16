@@ -11,7 +11,7 @@ pub struct Cuboid {
 }
 
 impl Cuboid {
-    pub(crate) fn new(position: Vec3, size: Vec3) -> Self {
+    pub fn new(position: Vec3, size: Vec3) -> Self {
         Self {
             position,
             extent: size * 0.5,

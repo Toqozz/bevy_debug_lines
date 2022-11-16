@@ -11,7 +11,7 @@ pub struct Line {
 }
 
 impl Line {
-    pub(crate) fn new(start: Vec3, end: Vec3) -> Self {
+    pub fn new(start: Vec3, end: Vec3) -> Self {
         Self {
             start,
             end,

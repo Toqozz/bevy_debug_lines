@@ -247,19 +247,9 @@ struct RenderDebugLinesMesh;
 ///
 /// // Draws 3 horizontal lines, which disappear after 1 frame.
 /// fn some_system(mut lines: ResMut<DebugLines>) {
-///     lines.line(Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0), 0.0);
-///     lines.line_colored(
-///         Vec3::new(-1.0, 0.0, 0.0),
-///         Vec3::new(1.0, 0.0, 0.0),
-///         0.0,
-///         Color::WHITE
-///     );`
-///     lines.line_gradient(
-///         Vec3::new(-1.0, -1.0, 0.0),
-///         Vec3::new(1.0, -1.0, 0.0),
-///         0.0,
-///         Color::WHITE, Color::PINK
-///     );
+///     lines.line(Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0));
+///     lines.line(Vec3::new(-1.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0)).color(Color::WHITE);
+///     lines.line(Vec3::new(-1.0, -1.0, 0.0), Vec3::new(1.0, -1.0, 0.0)).gradient(Color::WHITE, Color::PINK);
 /// }
 /// ```
 #[derive(Resource, Default)]
@@ -268,6 +258,7 @@ pub struct DebugLines {
 }
 
 impl DebugLines {
+    /// Add a generic shape to be drawn and return a handle to it.
     pub fn add<S>(&mut self, shape: S) -> ShapeHandle<'_, S>
     where
         S: Into<Shape>,
@@ -277,14 +268,17 @@ impl DebugLines {
         ShapeHandle::new(self, index)
     }
 
+    /// Short for [`DebugLines::add`].
     pub fn cuboid(&mut self, position: Vec3, size: Vec3) -> ShapeHandle<'_, shapes::Cuboid> {
         self.add(shapes::Cuboid::new(position, size))
     }
 
+    /// Short for [`DebugLines::add`].
     pub fn line(&mut self, start: Vec3, end: Vec3) -> ShapeHandle<'_, shapes::Line> {
         self.add(shapes::Line::new(start, end))
     }
 
+    /// Short for [`DebugLines::add`].
     pub fn rect(&mut self, position: Vec3, size: Vec2) -> ShapeHandle<'_, shapes::Rect> {
         self.add(shapes::Rect::new(position, size))
     }
