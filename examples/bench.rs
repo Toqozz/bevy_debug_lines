@@ -66,7 +66,10 @@ fn demo_circle(time: Res<Time>, mut lines: ResMut<DebugLines>) {
         let start_color = Color::rgba(start.x, start.y, 0.5, start.z.max(0.5));
         let end_color = Color::rgba(end.x, end.y, 0.5, end.z.max(0.5));
 
-        lines.line_gradient(start, end, DURATION, start_color, end_color);
+        lines
+            .line(start, end)
+            .duration(DURATION)
+            .gradient(start_color, end_color);
     }
 }
 
@@ -86,6 +89,9 @@ fn _demo_block(mut lines: DebugLines) {
         let start_color = Color::rgba(start.x, start.y, 0.5, 1.0);
         let end_color = Color::rgba(end.x, end.y, 0.5, 1.0);
 
-        lines.line_gradient(start, end, DURATION, start_color, end_color);
+        lines
+            .line(start, end)
+            .duration(DURATION)
+            .gradient(start_color, end_color);
     }
 }
