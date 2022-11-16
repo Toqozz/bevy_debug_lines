@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use bevy::prelude::*;
 
-use crate::{DebugLines, MAX_POINTS};
+use crate::DebugLines;
 
 pub use self::cuboid::Cuboid;
 pub use self::line::Line;
@@ -28,17 +28,17 @@ impl DebugShapes {
         ShapeHandle::new(self, index)
     }
 
-    /// Short for [`DebugLines::add`].
+    /// Short for [`DebugShapes::add`].
     pub fn cuboid(&mut self, position: Vec3, size: Vec3) -> ShapeHandle<'_, Cuboid> {
         self.add(Cuboid::new(position, size))
     }
 
-    /// Short for [`DebugLines::add`].
+    /// Short for [`DebugShapes::add`].
     pub fn line(&mut self, start: Vec3, end: Vec3) -> ShapeHandle<'_, Line> {
         self.add(Line::new(start, end))
     }
 
-    /// Short for [`DebugLines::add`].
+    /// Short for [`DebugShapes::add`].
     pub fn rect(&mut self, position: Vec3, size: Vec2) -> ShapeHandle<'_, Rect> {
         self.add(Rect::new(position, size))
     }
