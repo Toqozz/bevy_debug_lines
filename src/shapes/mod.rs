@@ -44,13 +44,6 @@ impl DebugShapes {
     }
 }
 
-pub(crate) fn update(mut lines: ResMut<DebugLines>, mut shapes: ResMut<DebugShapes>) {
-    for shape in &shapes.shapes {
-        shape.add_lines(&mut lines);
-    }
-    shapes.shapes.clear();
-}
-
 pub(crate) trait AddLines {
     fn add_lines(&self, lines: &mut DebugLines);
 }
