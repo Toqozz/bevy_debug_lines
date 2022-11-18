@@ -11,12 +11,8 @@ pub struct Cuboid {
 }
 
 impl Cuboid {
-    pub fn new(position: Vec3, size: Vec3) -> Self {
-        Self {
-            position,
-            extent: size * 0.5,
-            ..Default::default()
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -24,7 +20,7 @@ impl Default for Cuboid {
     fn default() -> Self {
         Self {
             position: Vec3::ZERO,
-            extent: Vec3::ZERO,
+            extent: Vec3::ONE,
             rotation: Quat::IDENTITY,
             color: Color::WHITE,
             duration: 0.0,
@@ -76,6 +72,24 @@ impl AddLines for Cuboid {
 }
 
 impl<'a> ShapeHandle<'a, Cuboid> {
+    pub fn position(self, position: Vec3) -> Self {
+        if let Shape::Cuboid(cuboid) = &mut self.shapes.shapes[self.index] {
+            cuboid.position = position;
+        }
+        self
+    }
+
+    pub fn size(self, size: Vec3) -> Self {
+        if let Shape::Cuboid(cuboid) = &mut self.shapes.shapes[self.index] {
+            cuboid.extent = size * 0.5;
+        }
+        self
+    }
+
+    pub fn min_max(self, min: Vec3, max: Vec3) -> Self {
+        self.position((min + max) * 0.5).size(max - min)
+    }
+
     pub fn rotation(self, rotation: Quat) -> Self {
         if let Shape::Cuboid(cuboid) = &mut self.shapes.shapes[self.index] {
             cuboid.rotation = rotation;

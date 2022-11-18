@@ -66,7 +66,8 @@ fn demo_circle(time: Res<Time>, mut shapes: ResMut<DebugShapes>) {
         let end_color = Color::rgba(end.x, end.y, 0.5, end.z.max(0.5));
 
         shapes
-            .line(start, end)
+            .line()
+            .start_end(start, end)
             .duration(DURATION)
             .gradient(start_color, end_color);
     }
