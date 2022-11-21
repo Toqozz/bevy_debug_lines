@@ -12,6 +12,13 @@ use bevy::{
         Extract,
     },
 };
+use shapes::AddLines;
+
+#[cfg(feature = "shapes")]
+pub use crate::shapes::DebugShapes;
+
+#[cfg(feature = "shapes")]
+mod shapes;
 
 mod render_dim;
 
@@ -115,6 +122,9 @@ impl Plugin for DebugLinesPlugin {
 
         app.init_resource::<DebugLines>();
 
+        #[cfg(feature = "shapes")]
+        app.init_resource::<DebugShapes>();
+
         app.add_startup_system(setup)
             .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
 
@@ -178,7 +188,17 @@ fn update(
     time: Res<Time>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut lines: ResMut<DebugLines>,
+    mut shapes: ResMut<DebugShapes>,
 ) {
+    // Add lines from shapes
+    #[cfg(feature = "shapes")]
+    {
+        for shape in &shapes.shapes {
+            shape.add_lines(&mut lines);
+        }
+        shapes.shapes.clear();
+    }
+
     // For each debug line mesh, fill its buffers with the relevant positions/colors chunks.
     for (mesh_handle, debug_lines_idx) in debug_line_meshes.iter() {
         let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
