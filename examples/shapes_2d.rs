@@ -36,4 +36,10 @@ fn demo(time: Res<Time>, mut shapes: ResMut<DebugShapes>) {
         .min_max(Vec2::new(-100.0, -100.0), Vec2::new(100.0, 100.0))
         .angle(seconds * -FRAC_PI_4)
         .color(Color::PURPLE);
+
+    shapes
+        .circle()
+        .position(Vec3::new(-200.0, 0.0, 0.0))
+        .radius(50.0)
+        .color(Color::RED);
 }
