@@ -20,13 +20,20 @@ fn setup(mut commands: Commands) {
 }
 
 fn demo(time: Res<Time>, mut shapes: ResMut<DebugShapes>) {
+    use std::f32::consts::FRAC_PI_4;
+
     let seconds = time.elapsed_seconds();
 
     shapes
-        .cuboid(Vec3::new(1.0, 0.0, 0.0), Vec3::new(1.0, 1.0, 1.0))
-        .rotation(Quat::from_axis_angle(
-            Vec3::X,
-            seconds * std::f32::consts::FRAC_PI_4,
-        ))
+        .cuboid()
+        .position(Vec3::new(2.0, 0.0, 0.0))
+        .size(Vec3::ONE)
+        .rotation(Quat::from_rotation_x(seconds * FRAC_PI_4))
         .color(Color::RED);
+
+    shapes
+        .cuboid()
+        .min_max(Vec3::NEG_ONE, Vec3::ONE)
+        .rotation(Quat::from_rotation_y(seconds * FRAC_PI_4))
+        .color(Color::PURPLE);
 }

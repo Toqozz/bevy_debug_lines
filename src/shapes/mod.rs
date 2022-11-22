@@ -53,13 +53,8 @@ impl DebugShapes {
     /// See [`ShapeHandle`] impl on [`Cuboid`] for more shape properties.
     ///
     /// Short for [`DebugShapes::add`].
-    ///
-    /// # Arguments
-    ///
-    /// * `position` - Center position
-    /// * `size` - Side lengths
-    pub fn cuboid(&mut self, position: Vec3, size: Vec3) -> ShapeHandle<'_, Cuboid> {
-        self.add(Cuboid::new(position, size))
+    pub fn cuboid(&mut self) -> ShapeHandle<'_, Cuboid> {
+        self.add(Cuboid::new())
     }
 
     /// Adds a [`Line`] shape.
@@ -67,27 +62,17 @@ impl DebugShapes {
     /// See [`ShapeHandle`] impl on [`Line`] for more shape properties.
     ///
     /// Short for [`DebugShapes::add`].
-    ///
-    /// # Arguments
-    ///
-    /// * `start` - Start position
-    /// * `end` - End position
-    pub fn line(&mut self, start: Vec3, end: Vec3) -> ShapeHandle<'_, Line> {
-        self.add(Line::new(start, end))
+    pub fn line(&mut self) -> ShapeHandle<'_, Line> {
+        self.add(Line::new())
     }
 
     /// Adds a [`Rect`] shape.
     ///
     /// See [`ShapeHandle`] impl on [`Rect`] for more shape properties.
     ///
-    /// Short for [`DebugShapes::add`].
-    ///
-    /// # Arguments
-    ///
-    /// * `position` - Center position
-    /// * `size` - Side lengths
-    pub fn rect(&mut self, position: Vec3, size: Vec2) -> ShapeHandle<'_, Rect> {
-        self.add(Rect::new(position, size))
+    /// Short for [`DebugShapes::add`].s
+    pub fn rect(&mut self) -> ShapeHandle<'_, Rect> {
+        self.add(Rect::new())
     }
 }
 
