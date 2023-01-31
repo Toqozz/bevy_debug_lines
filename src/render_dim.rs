@@ -174,6 +174,7 @@ pub mod r3d {
 }
 
 pub mod r2d {
+    use bevy::render::view::{ExtractedView, ViewTarget};
     use bevy::{
         asset::Handle,
         core_pipeline::core_2d::Transparent2d,
@@ -242,7 +243,11 @@ pub mod r2d {
                     shader_defs: vec![],
                     entry_point: "fragment".into(),
                     targets: vec![Some(ColorTargetState {
-                        format: TextureFormat::bevy_default(),
+                        format: if key.contains(Mesh2dPipelineKey::HDR) {
+                            ViewTarget::TEXTURE_FORMAT_HDR
+                        } else {
+                            TextureFormat::bevy_default()
+                        },
                         blend: Some(BlendState::ALPHA_BLENDING),
                         write_mask: ColorWrites::ALL,
                     })],
@@ -276,19 +281,24 @@ pub mod r2d {
         render_meshes: Res<RenderAssets<Mesh>>,
         msaa: Res<Msaa>,
         material_meshes: Query<(&Mesh2dUniform, &Mesh2dHandle), With<RenderDebugLinesMesh>>,
-        mut views: Query<(&VisibleEntities, &mut RenderPhase<Transparent2d>)>,
+        mut views: Query<(
+            &ExtractedView,
+            &VisibleEntities,
+            &mut RenderPhase<Transparent2d>,
+        )>,
     ) {
-        for (view, mut phase) in views.iter_mut() {
+        for (view, visible_entities, mut phase) in views.iter_mut() {
             let draw_mesh2d = draw2d_functions.read().get_id::<DrawDebugLines>().unwrap();
             let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples);
 
-            for visible_entity in &view.entities {
+            for visible_entity in &visible_entities.entities {
                 if let Ok((_uniform, mesh_handle)) = material_meshes.get(*visible_entity) {
                     if let Some(mesh) = render_meshes.get(&mesh_handle.0) {
                         let mesh_key = msaa_key
                             | Mesh2dPipelineKey::from_primitive_topology(
                                 PrimitiveTopology::LineList,
-                            );
+                            )
+                            | Mesh2dPipelineKey::from_hdr(view.hdr);
                         let pipeline = specialized_pipelines
                             .specialize(
                                 &mut pipeline_cache,
