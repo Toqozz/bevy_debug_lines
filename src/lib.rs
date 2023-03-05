@@ -113,7 +113,7 @@ impl DebugLinesPlugin {
 
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
-        use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderStage};
+        use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderSet};
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         shaders.set_untracked(
             DEBUG_LINES_SHADER_HANDLE,
@@ -126,7 +126,9 @@ impl Plugin for DebugLinesPlugin {
         app.init_resource::<DebugShapes>();
 
         app.add_startup_system(setup)
-            .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
+            .add_system(update.in_base_set(CoreSet::PostUpdate));
+        // TODO: This
+        // .add_system_to_set(CoreSet::PostUpdate, update.set("draw_lines"));
 
         app.sub_app_mut(RenderApp)
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
@@ -135,8 +137,9 @@ impl Plugin for DebugLinesPlugin {
             })
             .init_resource::<dim::DebugLinePipeline>()
             .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
-            .add_system_to_stage(RenderStage::Extract, extract)
-            .add_system_to_stage(RenderStage::Queue, dim::queue);
+            // TODO: Is ExtractCommands the right set?
+            .add_system(extract.in_set(RenderSet::ExtractCommands))
+            .add_system(dim::queue.in_set(RenderSet::Queue));
 
         info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
     }

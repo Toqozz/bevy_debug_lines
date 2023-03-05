@@ -47,9 +47,9 @@ pub mod r3d {
             layout: &MeshVertexBufferLayout,
         ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
             let mut shader_defs = Vec::new();
-            shader_defs.push("LINES_3D".to_string());
+            shader_defs.push("LINES_3D".into());
             if depth_test {
-                shader_defs.push("DEPTH_TEST_ENABLED".to_string());
+                shader_defs.push("DEPTH_TEST_ENABLED".into());
             }
 
             let vertex_buffer_layout = layout.get_layout(&[
@@ -57,7 +57,8 @@ pub mod r3d {
                 Mesh::ATTRIBUTE_COLOR.at_shader_location(1),
             ])?;
             let (label, blend, depth_write_enabled);
-            if key.contains(MeshPipelineKey::TRANSPARENT_MAIN_PASS) {
+            // TODO: FIX THIS
+            if key.contains(MeshPipelineKey::BLEND_ALPHA) {
                 label = "transparent_mesh_pipeline".into();
                 blend = Some(BlendState::ALPHA_BLENDING);
                 // For the transparent pass, fragments that are closer will be alpha
@@ -89,7 +90,7 @@ pub mod r3d {
                         write_mask: ColorWrites::ALL,
                     })],
                 }),
-                layout: Some(vec![self.mesh_pipeline.view_layout.clone()]),
+                layout: vec![self.mesh_pipeline.view_layout.clone()],
                 primitive: PrimitiveState {
                     front_face: FrontFace::Ccw,
                     cull_mode: None,
@@ -121,6 +122,7 @@ pub mod r3d {
                     alpha_to_coverage_enabled: false,
                 },
                 label: Some(label),
+                push_constant_ranges: vec![],
             })
         }
     }
@@ -140,7 +142,7 @@ pub mod r3d {
             .read()
             .get_id::<DrawDebugLines>()
             .unwrap();
-        let key = MeshPipelineKey::from_msaa_samples(msaa.samples);
+        let key = MeshPipelineKey::from_msaa_samples(msaa.samples());
         for (view, mut transparent_phase) in views.iter_mut() {
             let view_matrix = view.transform.compute_matrix();
             let view_row_2 = view_matrix.row(2);
@@ -252,7 +254,7 @@ pub mod r2d {
                         write_mask: ColorWrites::ALL,
                     })],
                 }),
-                layout: Some(vec![self.mesh_pipeline.view_layout.clone()]),
+                layout: vec![self.mesh_pipeline.view_layout.clone()],
                 primitive: PrimitiveState {
                     front_face: FrontFace::Ccw,
                     cull_mode: None,
@@ -269,6 +271,7 @@ pub mod r2d {
                     alpha_to_coverage_enabled: false,
                 },
                 label: None,
+                push_constant_ranges: vec![],
             })
         }
     }
@@ -289,7 +292,7 @@ pub mod r2d {
     ) {
         for (view, visible_entities, mut phase) in views.iter_mut() {
             let draw_mesh2d = draw2d_functions.read().get_id::<DrawDebugLines>().unwrap();
-            let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples);
+            let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples());
 
             for visible_entity in &visible_entities.entities {
                 if let Ok((_uniform, mesh_handle)) = material_meshes.get(*visible_entity) {
