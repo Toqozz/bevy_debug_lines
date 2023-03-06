@@ -68,7 +68,9 @@ pub(crate) struct DebugLinesConfig {
     depth_test: bool,
 }
 
-
+/// The `SystemSet` in which the debug lines update system runs.
+///
+/// This set is nested in `CoreSet::PostUpdate`, so it runs after all update systems.
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum DebugLinesSet {
     DrawLines,

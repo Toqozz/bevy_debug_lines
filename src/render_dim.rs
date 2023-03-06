@@ -127,6 +127,7 @@ pub mod r3d {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn queue(
         opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
@@ -276,6 +277,7 @@ pub mod r2d {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn queue(
         draw2d_functions: Res<DrawFunctions<Transparent2d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
