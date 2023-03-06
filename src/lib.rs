@@ -68,6 +68,12 @@ pub(crate) struct DebugLinesConfig {
     depth_test: bool,
 }
 
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum DebugLinesSet {
+    DrawLines,
+}
+
 /// Bevy plugin, for initializing stuff.
 ///
 /// # Usage
@@ -125,10 +131,11 @@ impl Plugin for DebugLinesPlugin {
         #[cfg(feature = "shapes")]
         app.init_resource::<DebugShapes>();
 
-        app.add_startup_system(setup)
-            .add_system(update.in_base_set(CoreSet::PostUpdate));
-        // TODO: This
-        // .add_system_to_set(CoreSet::PostUpdate, update.set("draw_lines"));
+        app.add_startup_system(setup).add_system(
+            update
+                .in_base_set(CoreSet::PostUpdate)
+                .in_set(DebugLinesSet::DrawLines),
+        );
 
         app.sub_app_mut(RenderApp)
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
@@ -137,8 +144,7 @@ impl Plugin for DebugLinesPlugin {
             })
             .init_resource::<dim::DebugLinePipeline>()
             .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
-            // TODO: Is ExtractCommands the right set?
-            .add_system(extract.in_set(RenderSet::ExtractCommands))
+            .add_system(extract.in_schedule(ExtractSchedule))
             .add_system(dim::queue.in_set(RenderSet::Queue));
 
         info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
