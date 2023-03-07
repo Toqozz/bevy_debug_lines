@@ -155,7 +155,7 @@ pub mod r3d {
         opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
         mut pipelines: ResMut<SpecializedMeshPipelines<DebugLinePipeline>>,
-        mut pipeline_cache: ResMut<PipelineCache>,
+        pipeline_cache: Res<PipelineCache>,
         render_meshes: Res<RenderAssets<Mesh>>,
         msaa: Res<Msaa>,
         material_meshes: Query<(Entity, &MeshUniform, &Handle<Mesh>), With<RenderDebugLinesMesh>>,
@@ -174,7 +174,7 @@ pub mod r3d {
                 if let Some(mesh) = render_meshes.get(mesh_handle) {
                     let pipeline = pipelines
                         .specialize(
-                            &mut pipeline_cache,
+                            &pipeline_cache,
                             &debug_line_pipeline,
                             (config.depth_test, key),
                             &mesh.layout,
@@ -304,7 +304,7 @@ pub mod r2d {
     pub(crate) fn queue(
         draw2d_functions: Res<DrawFunctions<Transparent2d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
-        mut pipeline_cache: ResMut<PipelineCache>,
+        pipeline_cache: Res<PipelineCache>,
         mut specialized_pipelines: ResMut<SpecializedMeshPipelines<DebugLinePipeline>>,
         render_meshes: Res<RenderAssets<Mesh>>,
         msaa: Res<Msaa>,
@@ -329,7 +329,7 @@ pub mod r2d {
                             | Mesh2dPipelineKey::from_hdr(view.hdr);
                         let pipeline = specialized_pipelines
                             .specialize(
-                                &mut pipeline_cache,
+                                &pipeline_cache,
                                 &debug_line_pipeline,
                                 mesh_key,
                                 &mesh.layout,
