@@ -3,7 +3,7 @@ pub mod r3d {
         core_pipeline::core_3d::Opaque3d,
         pbr::{
             DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup,
-            SetMeshViewBindGroup,
+            SetMeshViewBindGroup, MAX_CASCADES_PER_LIGHT, MAX_DIRECTIONAL_LIGHTS,
         },
         prelude::*,
         render::{
@@ -11,14 +11,14 @@ pub mod r3d {
             render_asset::RenderAssets,
             render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
             render_resource::{
-                BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState,
-                DepthStencilState, FragmentState, FrontFace, MultisampleState, PipelineCache,
-                PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor,
+                ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState,
+                FragmentState, FrontFace, MultisampleState, PipelineCache, PolygonMode,
+                PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor, ShaderDefVal,
                 SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
                 StencilFaceState, StencilState, TextureFormat, VertexState,
             },
             texture::BevyDefault,
-            view::{ExtractedView, Msaa},
+            view::{ExtractedView, Msaa, ViewTarget},
         },
     };
 
@@ -48,6 +48,14 @@ pub mod r3d {
         ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
             let mut shader_defs = Vec::new();
             shader_defs.push("LINES_3D".into());
+            shader_defs.push(ShaderDefVal::Int(
+                "MAX_CASCADES_PER_LIGHT".to_string(),
+                MAX_CASCADES_PER_LIGHT as i32,
+            ));
+            shader_defs.push(ShaderDefVal::Int(
+                "MAX_DIRECTIONAL_LIGHTS".to_string(),
+                MAX_DIRECTIONAL_LIGHTS as i32,
+            ));
             if depth_test {
                 shader_defs.push("DEPTH_TEST_ENABLED".into());
             }
@@ -56,22 +64,20 @@ pub mod r3d {
                 Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
                 Mesh::ATTRIBUTE_COLOR.at_shader_location(1),
             ])?;
-            let (label, blend, depth_write_enabled);
-            // TODO: FIX THIS
-            if key.contains(MeshPipelineKey::BLEND_ALPHA) {
-                label = "transparent_mesh_pipeline".into();
-                blend = Some(BlendState::ALPHA_BLENDING);
-                // For the transparent pass, fragments that are closer will be alpha
-                // blended but their depth is not written to the depth buffer.
-                depth_write_enabled = false;
+
+            let bind_group_layout = match key.msaa_samples() {
+                1 => vec![self.mesh_pipeline.view_layout.clone()],
+                _ => {
+                    shader_defs.push("MULTISAMPLED".into());
+                    vec![self.mesh_pipeline.view_layout_multisampled.clone()]
+                }
+            };
+
+            let format = if key.contains(MeshPipelineKey::HDR) {
+                ViewTarget::TEXTURE_FORMAT_HDR
             } else {
-                label = "opaque_mesh_pipeline".into();
-                blend = Some(BlendState::REPLACE);
-                // For the opaque and alpha mask passes, fragments that are closer
-                // will replace the current fragment value in the output and the depth is
-                // written to the depth buffer.
-                depth_write_enabled = true;
-            }
+                TextureFormat::bevy_default()
+            };
 
             Ok(RenderPipelineDescriptor {
                 vertex: VertexState {
@@ -85,12 +91,12 @@ pub mod r3d {
                     shader_defs,
                     entry_point: "fragment".into(),
                     targets: vec![Some(ColorTargetState {
-                        format: TextureFormat::bevy_default(),
-                        blend,
+                        format,
+                        blend: None,
                         write_mask: ColorWrites::ALL,
                     })],
                 }),
-                layout: vec![self.mesh_pipeline.view_layout.clone()],
+                layout: bind_group_layout,
                 primitive: PrimitiveState {
                     front_face: FrontFace::Ccw,
                     cull_mode: None,
@@ -102,7 +108,7 @@ pub mod r3d {
                 },
                 depth_stencil: Some(DepthStencilState {
                     format: TextureFormat::Depth32Float,
-                    depth_write_enabled,
+                    depth_write_enabled: true,
                     depth_compare: CompareFunction::Greater,
                     stencil: StencilState {
                         front: StencilFaceState::IGNORE,
@@ -121,7 +127,7 @@ pub mod r3d {
                     mask: !0,
                     alpha_to_coverage_enabled: false,
                 },
-                label: Some(label),
+                label: Some("line_3d_pipeline".into()),
                 push_constant_ranges: vec![],
             })
         }
