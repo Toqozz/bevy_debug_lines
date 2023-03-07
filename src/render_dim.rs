@@ -11,11 +11,12 @@ pub mod r3d {
             render_asset::RenderAssets,
             render_phase::{DrawFunctions, RenderPhase, SetItemPipeline},
             render_resource::{
-                ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState,
-                FragmentState, FrontFace, MultisampleState, PipelineCache, PolygonMode,
-                PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor, ShaderDefVal,
-                SpecializedMeshPipeline, SpecializedMeshPipelineError, SpecializedMeshPipelines,
-                StencilFaceState, StencilState, TextureFormat, VertexState,
+                BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState,
+                DepthStencilState, FragmentState, FrontFace, MultisampleState, PipelineCache,
+                PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipelineDescriptor,
+                ShaderDefVal, SpecializedMeshPipeline, SpecializedMeshPipelineError,
+                SpecializedMeshPipelines, StencilFaceState, StencilState, TextureFormat,
+                VertexState,
             },
             texture::BevyDefault,
             view::{ExtractedView, Msaa, ViewTarget},
@@ -60,6 +61,22 @@ pub mod r3d {
                 shader_defs.push("DEPTH_TEST_ENABLED".into());
             }
 
+            let (label, blend, depth_write_enabled);
+            if key.contains(MeshPipelineKey::BLEND_ALPHA) {
+                label = "transparent_mesh_pipeline".into();
+                blend = Some(BlendState::ALPHA_BLENDING);
+                // For the transparent pass, fragments that are closer will be alpha
+                // blended but their depth is not written to the depth buffer.
+                depth_write_enabled = false;
+            } else {
+                label = "opaque_mesh_pipeline".into();
+                blend = Some(BlendState::REPLACE);
+                // For the opaque and alpha mask passes, fragments that are closer
+                // will replace the current fragment value in the output and the depth is
+                // written to the depth buffer.
+                depth_write_enabled = true;
+            }
+
             let vertex_buffer_layout = layout.get_layout(&[
                 Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
                 Mesh::ATTRIBUTE_COLOR.at_shader_location(1),
@@ -92,7 +109,7 @@ pub mod r3d {
                     entry_point: "fragment".into(),
                     targets: vec![Some(ColorTargetState {
                         format,
-                        blend: None,
+                        blend,
                         write_mask: ColorWrites::ALL,
                     })],
                 }),
@@ -108,7 +125,7 @@ pub mod r3d {
                 },
                 depth_stencil: Some(DepthStencilState {
                     format: TextureFormat::Depth32Float,
-                    depth_write_enabled: true,
+                    depth_write_enabled,
                     depth_compare: CompareFunction::Greater,
                     stencil: StencilState {
                         front: StencilFaceState::IGNORE,
@@ -127,7 +144,7 @@ pub mod r3d {
                     mask: !0,
                     alpha_to_coverage_enabled: false,
                 },
-                label: Some("line_3d_pipeline".into()),
+                label: Some(label),
                 push_constant_ranges: vec![],
             })
         }
