@@ -4,7 +4,7 @@ use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 fn main() {
     App::new()
-        .insert_resource(Msaa { samples: 4 })
+        .insert_resource(Msaa::default())
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin::with_depth_test(true))
         .add_startup_system(setup)

@@ -68,6 +68,14 @@ pub(crate) struct DebugLinesConfig {
     depth_test: bool,
 }
 
+/// The `SystemSet` in which the debug lines update system runs.
+///
+/// This set is nested in `CoreSet::PostUpdate`, so it runs after all update systems.
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum DebugLinesSet {
+    DrawLines,
+}
+
 /// Bevy plugin, for initializing stuff.
 ///
 /// # Usage
@@ -113,7 +121,7 @@ impl DebugLinesPlugin {
 
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
-        use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderStage};
+        use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderSet};
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         shaders.set_untracked(
             DEBUG_LINES_SHADER_HANDLE,
@@ -125,8 +133,11 @@ impl Plugin for DebugLinesPlugin {
         #[cfg(feature = "shapes")]
         app.init_resource::<DebugShapes>();
 
-        app.add_startup_system(setup)
-            .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
+        app.add_startup_system(setup).add_system(
+            update
+                .in_base_set(CoreSet::PostUpdate)
+                .in_set(DebugLinesSet::DrawLines),
+        );
 
         app.sub_app_mut(RenderApp)
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
@@ -135,8 +146,8 @@ impl Plugin for DebugLinesPlugin {
             })
             .init_resource::<dim::DebugLinePipeline>()
             .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
-            .add_system_to_stage(RenderStage::Extract, extract)
-            .add_system_to_stage(RenderStage::Queue, dim::queue);
+            .add_system(extract.in_schedule(ExtractSchedule))
+            .add_system(dim::queue.in_set(RenderSet::Queue));
 
         info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
     }
