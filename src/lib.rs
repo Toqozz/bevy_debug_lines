@@ -18,7 +18,7 @@ use shapes::AddLines;
 pub use crate::shapes::DebugShapes;
 
 #[cfg(feature = "shapes")]
-mod shapes;
+pub mod shapes;
 
 mod render_dim;
 

@@ -5,6 +5,7 @@
 A plugin providing a simple line drawing api for bevy.
 
 ![demo](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo.gif)
+![demo_shapes](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo_shapes.gif)
 [![demo_2](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo_2.png)](https://i.imgur.com/ryu3SEe.gifv)
 Click on the above demo to play it.
 
@@ -114,6 +115,7 @@ This is technically a non-breaking change (i.e. your code will still compile) be
 
 | bevy | bevy_prototype_debug_lines |
 | --- | --- |
+| 0.10 | 0.10 |
 | 0.9 | 0.9 |
 | 0.8 | 0.8 |
 | 0.7 | 0.7 |
