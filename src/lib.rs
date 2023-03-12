@@ -216,23 +216,27 @@ fn update(
         use VertexAttributeValues::{Float32x3, Float32x4};
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
-            if let Some(new_content) = lines
-                .positions
-                .chunks(MAX_POINTS_PER_MESH)
-                .nth(debug_lines_idx.0)
-            {
-                vbuffer.extend(new_content);
+            if lines.enabled {
+                if let Some(new_content) = lines
+                    .positions
+                    .chunks(MAX_POINTS_PER_MESH)
+                    .nth(debug_lines_idx.0)
+                {
+                    vbuffer.extend(new_content);
+                }
             }
         }
 
         if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
             cbuffer.clear();
-            if let Some(new_content) = lines
-                .colors
-                .chunks(MAX_POINTS_PER_MESH)
-                .nth(debug_lines_idx.0)
-            {
-                cbuffer.extend(new_content);
+            if lines.enabled {
+                if let Some(new_content) = lines
+                    .colors
+                    .chunks(MAX_POINTS_PER_MESH)
+                    .nth(debug_lines_idx.0)
+                {
+                    cbuffer.extend(new_content);
+                }
             }
         }
 
@@ -291,11 +295,23 @@ struct RenderDebugLinesMesh;
 ///     );
 /// }
 /// ```
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct DebugLines {
+    pub enabled: bool,
     pub positions: Vec<[f32; 3]>,
     pub colors: Vec<[f32; 4]>,
     pub durations: Vec<f32>,
+}
+
+impl Default for DebugLines {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            positions: vec![],
+            colors: vec![],
+            durations: vec![],
+        }
+    }
 }
 
 impl DebugLines {
