@@ -106,6 +106,16 @@ pub enum DebugLinesSet {
 ///     .add_plugin(DebugLinesPlugin::with_depth_test(true))
 ///     .run();
 /// ```
+/// The [`RenderLayers`] to which lines will be drawn can also be specified.
+/// ```
+/// use bevy::prelude::*;
+/// use bevy_prototype_debug_lines::*;
+///
+/// App::new()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugin(DebugLinesPlugin { render_layers: vec![0, 1, 5], ..default()})
+///     .run();
+/// ```
 #[derive(Debug, Clone)]
 pub struct DebugLinesPlugin {
     depth_test: bool,
