@@ -70,7 +70,7 @@ pub(crate) struct DebugLinesConfig {
 
 #[derive(Resource)]
 pub(crate) struct DebugLinesRenderLayer {
-    render_layer: u8,
+    render_layers: Vec<u8>,
 }
 
 /// The `SystemSet` in which the debug lines update system runs.
@@ -106,10 +106,18 @@ pub enum DebugLinesSet {
 ///     .add_plugin(DebugLinesPlugin::with_depth_test(true))
 ///     .run();
 /// ```
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct DebugLinesPlugin {
     depth_test: bool,
-    render_layer: u8,
+    render_layers: Vec<u8>,
+}
+impl Default for DebugLinesPlugin {
+    fn default() -> Self {
+        Self {
+            depth_test: false,
+            render_layers: vec![0], // All entitities are renderered in layer 0 if not otherwise specified.
+        }
+    }
 }
 
 impl DebugLinesPlugin {
@@ -143,7 +151,7 @@ impl Plugin for DebugLinesPlugin {
         app.init_resource::<DebugShapes>();
 
         app.insert_resource(DebugLinesRenderLayer {
-            render_layer: self.render_layer,
+            render_layers: self.render_layers.to_owned(),
         });
 
         app.add_startup_system(setup).add_system(
@@ -203,7 +211,7 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<Debug
             ComputedVisibility::default(),
             DebugLinesMesh(i),
             NoFrustumCulling, // disable frustum culling
-            RenderLayers::layer(config.render_layer),
+            RenderLayers::from_layers(config.render_layers.as_slice()),
         ));
     }
 }
