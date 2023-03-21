@@ -113,7 +113,7 @@ pub enum DebugLinesSet {
 ///
 /// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugin(DebugLinesPlugin { render_layers: vec![0, 1, 5], ..default()})
+///     .add_plugin(DebugLinesPlugin::with_layers(vec![0, 1, 5]))
 ///     .run();
 /// ```
 #[derive(Debug, Clone)]
@@ -141,6 +141,20 @@ impl DebugLinesPlugin {
     pub fn with_depth_test(val: bool) -> Self {
         Self {
             depth_test: val,
+            ..default()
+        }
+    }
+
+    /// Controls which [`RenderLayers`] the debug line entity should belong to.
+    /// Cameras will only render entities on layers which intersect with the camera's own [`RenderLayers`] component.
+    /// If not specified, the debug line entity will be on layer 0 by default.
+    ///
+    /// # Arguments
+    ///
+    /// * `layers` - The list of rendering layers.
+    pub fn with_layers(layers: Vec<u8>) -> Self {
+        Self {
+            render_layers: layers,
             ..default()
         }
     }
