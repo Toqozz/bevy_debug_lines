@@ -8,7 +8,7 @@ use bevy::{
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
         render_resource::Shader,
-        view::NoFrustumCulling,
+        view::{NoFrustumCulling, RenderLayers},
         Extract,
     },
 };
@@ -68,6 +68,11 @@ pub(crate) struct DebugLinesConfig {
     depth_test: bool,
 }
 
+#[derive(Resource)]
+pub(crate) struct DebugLinesRenderLayer {
+    render_layers: Vec<u8>,
+}
+
 /// The `SystemSet` in which the debug lines update system runs.
 ///
 /// This set is nested in `CoreSet::PostUpdate`, so it runs after all update systems.
@@ -101,9 +106,28 @@ pub enum DebugLinesSet {
 ///     .add_plugin(DebugLinesPlugin::with_depth_test(true))
 ///     .run();
 /// ```
-#[derive(Debug, Default, Clone)]
+/// The [`RenderLayers`] to which lines will be drawn can also be specified.
+/// ```
+/// use bevy::prelude::*;
+/// use bevy_prototype_debug_lines::*;
+///
+/// App::new()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugin(DebugLinesPlugin::with_layers(vec![0, 1, 5]))
+///     .run();
+/// ```
+#[derive(Debug, Clone)]
 pub struct DebugLinesPlugin {
     depth_test: bool,
+    render_layers: Vec<u8>,
+}
+impl Default for DebugLinesPlugin {
+    fn default() -> Self {
+        Self {
+            depth_test: false,
+            render_layers: vec![0], // All entitities are renderered in layer 0 if not otherwise specified.
+        }
+    }
 }
 
 impl DebugLinesPlugin {
@@ -115,7 +139,24 @@ impl DebugLinesPlugin {
     /// * `val` - True if lines should intersect with other geometry, or false
     ///   if lines should always draw on top be drawn on top (the default).
     pub fn with_depth_test(val: bool) -> Self {
-        Self { depth_test: val }
+        Self {
+            depth_test: val,
+            ..default()
+        }
+    }
+
+    /// Controls which [`RenderLayers`] the debug line entity should belong to.
+    /// Cameras will only render entities on layers which intersect with the camera's own [`RenderLayers`] component.
+    /// If not specified, the debug line entity will be on layer 0 by default.
+    ///
+    /// # Arguments
+    ///
+    /// * `layers` - The list of rendering layers.
+    pub fn with_layers(layers: Vec<u8>) -> Self {
+        Self {
+            render_layers: layers,
+            ..default()
+        }
     }
 }
 
@@ -132,6 +173,10 @@ impl Plugin for DebugLinesPlugin {
 
         #[cfg(feature = "shapes")]
         app.init_resource::<DebugShapes>();
+
+        app.insert_resource(DebugLinesRenderLayer {
+            render_layers: self.render_layers.to_owned(),
+        });
 
         app.add_startup_system(setup).add_system(
             update
@@ -164,7 +209,7 @@ pub const MAX_POINTS: usize = MAX_POINTS_PER_MESH * MESH_COUNT;
 /// Maximum number of unique lines to draw at once.
 pub const MAX_LINES: usize = MAX_POINTS / 2;
 
-fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<DebugLinesRenderLayer>) {
     // Spawn a bunch of meshes to use for lines.
     for i in 0..MESH_COUNT {
         // Create a new mesh with the number of vertices we need.
@@ -190,6 +235,7 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             ComputedVisibility::default(),
             DebugLinesMesh(i),
             NoFrustumCulling, // disable frustum culling
+            RenderLayers::from_layers(config.render_layers.as_slice()),
         ));
     }
 }
