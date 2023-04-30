@@ -28,7 +28,7 @@ mod sphere;
 ///     let seconds = time.elapsed_seconds();
 ///
 ///     shapes
-///         .cuboid(Vec3::new(0.0, 0.0, 0.0), Vec3::new(1.0, 1.0, 1.0))
+///         .cuboid()
 ///         .rotation(Quat::from_axis_angle(
 ///             Vec3::X,
 ///             seconds * std::f32::consts::FRAC_PI_4,

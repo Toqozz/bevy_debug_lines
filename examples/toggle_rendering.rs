@@ -27,7 +27,12 @@ fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
     );
 }
 
-fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>) {
+fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>, keyboard_input: Res<Input<KeyCode>>) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        info!("Toggled Rendering.");
+        lines.enabled = !lines.enabled;
+    }
+
     let seconds = time.elapsed_seconds();
 
     lines.line(

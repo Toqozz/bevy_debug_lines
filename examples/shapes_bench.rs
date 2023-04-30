@@ -8,17 +8,17 @@ use bevy_prototype_debug_lines::{DebugLinesPlugin, DebugShapes};
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
-                present_mode: PresentMode::Immediate,
-                ..Default::default()
-            },
-            ..Default::default()
+            primary_window: Some(Window {
+                present_mode: PresentMode::AutoNoVsync,
+                ..default()
+            }),
+            ..default()
         }))
         .add_plugin(DebugLinesPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin {
             wait_duration: bevy::utils::Duration::new(5, 0),
-            ..Default::default()
+            ..default()
         })
         .add_startup_system(setup)
         .add_system(demo_circle)

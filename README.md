@@ -5,6 +5,7 @@
 A plugin providing a simple line drawing api for bevy.
 
 ![demo](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo.gif)
+![demo_shapes](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo_shapes.gif)
 [![demo_2](https://github.com/Toqozz/bevy_debug_lines/blob/master/demo_2.png)](https://i.imgur.com/ryu3SEe.gifv)
 Click on the above demo to play it.
 
@@ -17,9 +18,9 @@ This plugin uses a shader and sends individual points to the GPU, which then mov
 Add `bevy_prototype_debug_lines` to your `Cargo.toml`:
 ```toml
 [dependencies]
-bevy_prototype_debug_lines = "0.9"
+bevy_prototype_debug_lines = "0.10"
 # Or, for 3d:
-# bevy_prototype_debug_lines = { version = "0.9", features = ["3d"] }
+# bevy_prototype_debug_lines = { version = "0.10", features = ["3d"] }
 ```
 
 Add the plugin in your `App::new()` phase:
@@ -114,6 +115,7 @@ This is technically a non-breaking change (i.e. your code will still compile) be
 
 | bevy | bevy_prototype_debug_lines |
 | --- | --- |
+| 0.10 | 0.10 |
 | 0.9 | 0.9 |
 | 0.8 | 0.8 |
 | 0.7 | 0.7 |

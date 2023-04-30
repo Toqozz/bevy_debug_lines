@@ -8,7 +8,7 @@ use bevy::{
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
         render_resource::Shader,
-        view::NoFrustumCulling,
+        view::{NoFrustumCulling, RenderLayers},
         Extract,
     },
 };
@@ -18,7 +18,7 @@ use shapes::AddLines;
 pub use crate::shapes::DebugShapes;
 
 #[cfg(feature = "shapes")]
-mod shapes;
+pub mod shapes;
 
 mod render_dim;
 
@@ -68,6 +68,19 @@ pub(crate) struct DebugLinesConfig {
     depth_test: bool,
 }
 
+#[derive(Resource)]
+pub(crate) struct DebugLinesRenderLayer {
+    render_layers: Vec<u8>,
+}
+
+/// The `SystemSet` in which the debug lines update system runs.
+///
+/// This set is nested in `CoreSet::PostUpdate`, so it runs after all update systems.
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum DebugLinesSet {
+    DrawLines,
+}
+
 /// Bevy plugin, for initializing stuff.
 ///
 /// # Usage
@@ -93,9 +106,28 @@ pub(crate) struct DebugLinesConfig {
 ///     .add_plugin(DebugLinesPlugin::with_depth_test(true))
 ///     .run();
 /// ```
-#[derive(Debug, Default, Clone)]
+/// The [`RenderLayers`] to which lines will be drawn can also be specified.
+/// ```
+/// use bevy::prelude::*;
+/// use bevy_prototype_debug_lines::*;
+///
+/// App::new()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugin(DebugLinesPlugin::with_layers(vec![0, 1, 5]))
+///     .run();
+/// ```
+#[derive(Debug, Clone)]
 pub struct DebugLinesPlugin {
     depth_test: bool,
+    render_layers: Vec<u8>,
+}
+impl Default for DebugLinesPlugin {
+    fn default() -> Self {
+        Self {
+            depth_test: false,
+            render_layers: vec![0], // All entitities are renderered in layer 0 if not otherwise specified.
+        }
+    }
 }
 
 impl DebugLinesPlugin {
@@ -107,13 +139,30 @@ impl DebugLinesPlugin {
     /// * `val` - True if lines should intersect with other geometry, or false
     ///   if lines should always draw on top be drawn on top (the default).
     pub fn with_depth_test(val: bool) -> Self {
-        Self { depth_test: val }
+        Self {
+            depth_test: val,
+            ..default()
+        }
+    }
+
+    /// Controls which [`RenderLayers`] the debug line entity should belong to.
+    /// Cameras will only render entities on layers which intersect with the camera's own [`RenderLayers`] component.
+    /// If not specified, the debug line entity will be on layer 0 by default.
+    ///
+    /// # Arguments
+    ///
+    /// * `layers` - The list of rendering layers.
+    pub fn with_layers(layers: Vec<u8>) -> Self {
+        Self {
+            render_layers: layers,
+            ..default()
+        }
     }
 }
 
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
-        use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderStage};
+        use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderSet};
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         shaders.set_untracked(
             DEBUG_LINES_SHADER_HANDLE,
@@ -125,8 +174,15 @@ impl Plugin for DebugLinesPlugin {
         #[cfg(feature = "shapes")]
         app.init_resource::<DebugShapes>();
 
-        app.add_startup_system(setup)
-            .add_system_to_stage(CoreStage::PostUpdate, update.label("draw_lines"));
+        app.insert_resource(DebugLinesRenderLayer {
+            render_layers: self.render_layers.to_owned(),
+        });
+
+        app.add_startup_system(setup).add_system(
+            update
+                .in_base_set(CoreSet::PostUpdate)
+                .in_set(DebugLinesSet::DrawLines),
+        );
 
         app.sub_app_mut(RenderApp)
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
@@ -135,8 +191,8 @@ impl Plugin for DebugLinesPlugin {
             })
             .init_resource::<dim::DebugLinePipeline>()
             .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
-            .add_system_to_stage(RenderStage::Extract, extract)
-            .add_system_to_stage(RenderStage::Queue, dim::queue);
+            .add_system(extract.in_schedule(ExtractSchedule))
+            .add_system(dim::queue.in_set(RenderSet::Queue));
 
         info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
     }
@@ -153,7 +209,7 @@ pub const MAX_POINTS: usize = MAX_POINTS_PER_MESH * MESH_COUNT;
 /// Maximum number of unique lines to draw at once.
 pub const MAX_LINES: usize = MAX_POINTS / 2;
 
-fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<DebugLinesRenderLayer>) {
     // Spawn a bunch of meshes to use for lines.
     for i in 0..MESH_COUNT {
         // Create a new mesh with the number of vertices we need.
@@ -179,6 +235,7 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             ComputedVisibility::default(),
             DebugLinesMesh(i),
             NoFrustumCulling, // disable frustum culling
+            RenderLayers::from_layers(config.render_layers.as_slice()),
         ));
     }
 }
@@ -205,23 +262,27 @@ fn update(
         use VertexAttributeValues::{Float32x3, Float32x4};
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
-            if let Some(new_content) = lines
-                .positions
-                .chunks(MAX_POINTS_PER_MESH)
-                .nth(debug_lines_idx.0)
-            {
-                vbuffer.extend(new_content);
+            if lines.enabled {
+                if let Some(new_content) = lines
+                    .positions
+                    .chunks(MAX_POINTS_PER_MESH)
+                    .nth(debug_lines_idx.0)
+                {
+                    vbuffer.extend(new_content);
+                }
             }
         }
 
         if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
             cbuffer.clear();
-            if let Some(new_content) = lines
-                .colors
-                .chunks(MAX_POINTS_PER_MESH)
-                .nth(debug_lines_idx.0)
-            {
-                cbuffer.extend(new_content);
+            if lines.enabled {
+                if let Some(new_content) = lines
+                    .colors
+                    .chunks(MAX_POINTS_PER_MESH)
+                    .nth(debug_lines_idx.0)
+                {
+                    cbuffer.extend(new_content);
+                }
             }
         }
 
@@ -280,11 +341,23 @@ struct RenderDebugLinesMesh;
 ///     );
 /// }
 /// ```
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct DebugLines {
+    pub enabled: bool,
     pub positions: Vec<[f32; 3]>,
     pub colors: Vec<[f32; 4]>,
     pub durations: Vec<f32>,
+}
+
+impl Default for DebugLines {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            positions: vec![],
+            colors: vec![],
+            durations: vec![],
+        }
+    }
 }
 
 impl DebugLines {

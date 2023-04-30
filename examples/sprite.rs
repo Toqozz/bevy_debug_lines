@@ -14,7 +14,7 @@ fn main() {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle {
         transform: Transform::from_xyz(0.0, 0.0, 5.0),
-        ..Default::default()
+        ..default()
     });
 
     commands.spawn(SpriteBundle {
