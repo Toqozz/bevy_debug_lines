@@ -36,4 +36,16 @@ fn demo(time: Res<Time>, mut shapes: ResMut<DebugShapes>) {
         .min_max(Vec3::NEG_ONE, Vec3::ONE)
         .rotation(Quat::from_rotation_y(seconds * FRAC_PI_4))
         .color(Color::PURPLE);
+
+    shapes
+        .sphere()
+        .position(Vec3::new(-2.0, 0.0, 0.0))
+        .radius(0.5)
+        .rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            seconds * FRAC_PI_4,
+            seconds * FRAC_PI_4,
+            0.0,
+        ))
+        .color(Color::RED);
 }
