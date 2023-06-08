@@ -166,17 +166,20 @@ pub mod r3d {
             .read()
             .get_id::<DrawDebugLines>()
             .unwrap();
-        let key = MeshPipelineKey::from_msaa_samples(msaa.samples());
+        let msaa_key = MeshPipelineKey::from_msaa_samples(msaa.samples());
         for (view, mut transparent_phase) in views.iter_mut() {
             let view_matrix = view.transform.compute_matrix();
             let view_row_2 = view_matrix.row(2);
             for (entity, mesh_uniform, mesh_handle) in material_meshes.iter() {
                 if let Some(mesh) = render_meshes.get(mesh_handle) {
+                    let mesh_key = msaa_key
+                        | MeshPipelineKey::from_primitive_topology(PrimitiveTopology::LineList)
+                        | MeshPipelineKey::from_hdr(view.hdr);
                     let pipeline = pipelines
                         .specialize(
                             &pipeline_cache,
                             &debug_line_pipeline,
-                            (config.depth_test, key),
+                            (config.depth_test, mesh_key),
                             &mesh.layout,
                         )
                         .unwrap();
