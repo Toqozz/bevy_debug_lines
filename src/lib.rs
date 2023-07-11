@@ -166,7 +166,7 @@ impl Plugin for DebugLinesPlugin {
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         shaders.set_untracked(
             DEBUG_LINES_SHADER_HANDLE,
-            Shader::from_wgsl(dim::SHADER_FILE),
+            Shader::from_wgsl(dim::SHADER_FILE, dim::SHADER_FILE),
         );
 
         app.init_resource::<DebugLines>();
@@ -189,12 +189,20 @@ impl Plugin for DebugLinesPlugin {
             .insert_resource(DebugLinesConfig {
                 depth_test: self.depth_test,
             })
-            .init_resource::<dim::DebugLinePipeline>()
             .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
             .add_system(extract.in_schedule(ExtractSchedule))
             .add_system(dim::queue.in_set(RenderSet::Queue));
 
         info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
+    }
+
+    // We can't add the pipeline to the app until after the render app has been initialized.
+    fn finish(&self, app: &mut App) {
+        use bevy::render::RenderApp;
+
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .init_resource::<dim::DebugLinePipeline>();
     }
 }
 
