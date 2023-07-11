@@ -14,14 +14,14 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugin(DebugLinesPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin {
+        .add_plugins(DebugLinesPlugin::default())
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(LogDiagnosticsPlugin {
             wait_duration: bevy::utils::Duration::new(5, 0),
             ..default()
         })
-        .add_startup_system(setup)
-        .add_system(demo_circle)
+        .add_systems(Startup, setup)
+        .add_systems(Update, demo_circle)
         .run();
 }
 

@@ -31,7 +31,7 @@ use bevy_prototype_debug_lines::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin::default())
+        .add_plugins(DebugLinesPlugin::default())
 //      ...
         .run();
 }
@@ -60,7 +60,7 @@ use bevy_prototype_debug_lines::*;
 fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(DebugLinesPlugin::with_depth_test(true))
+    .add_plugins(DebugLinesPlugin::with_depth_test(true))
 //  ...
     .run();
 }

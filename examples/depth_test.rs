@@ -6,9 +6,9 @@ fn main() {
     App::new()
         .insert_resource(Msaa::default())
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin::with_depth_test(true))
-        .add_startup_system(setup)
-        .add_system(demo)
+        .add_plugins(DebugLinesPlugin::with_depth_test(true))
+        .add_systems(Startup, setup)
+        .add_systems(Update, demo)
         .run();
 }
 

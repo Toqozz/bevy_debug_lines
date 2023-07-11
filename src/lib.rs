@@ -91,7 +91,7 @@ pub enum DebugLinesSet {
 ///
 /// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugin(DebugLinesPlugin::default())
+///     .add_plugins(DebugLinesPlugin::default())
 ///     .run();
 /// ```
 ///
@@ -103,7 +103,7 @@ pub enum DebugLinesSet {
 ///
 /// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugin(DebugLinesPlugin::with_depth_test(true))
+///     .add_plugins(DebugLinesPlugin::with_depth_test(true))
 ///     .run();
 /// ```
 /// The [`RenderLayers`] to which lines will be drawn can also be specified.
@@ -113,7 +113,7 @@ pub enum DebugLinesSet {
 ///
 /// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugin(DebugLinesPlugin::with_layers(vec![0, 1, 5]))
+///     .add_plugins(DebugLinesPlugin::with_layers(vec![0, 1, 5]))
 ///     .run();
 /// ```
 #[derive(Debug, Clone)]
@@ -178,11 +178,8 @@ impl Plugin for DebugLinesPlugin {
             render_layers: self.render_layers.to_owned(),
         });
 
-        app.add_startup_system(setup).add_system(
-            update
-                .in_base_set(CoreSet::PostUpdate)
-                .in_set(DebugLinesSet::DrawLines),
-        );
+        app.add_systems(Startup, setup)
+            .add_systems(PostUpdate, update.in_set(DebugLinesSet::DrawLines));
 
         app.sub_app_mut(RenderApp)
             .add_render_command::<dim::Phase, dim::DrawDebugLines>()
@@ -190,8 +187,8 @@ impl Plugin for DebugLinesPlugin {
                 depth_test: self.depth_test,
             })
             .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
-            .add_system(extract.in_schedule(ExtractSchedule))
-            .add_system(dim::queue.in_set(RenderSet::Queue));
+            .add_systems(ExtractSchedule, extract)
+            .add_systems(Update, dim::queue.in_set(RenderSet::Queue));
 
         info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
     }
