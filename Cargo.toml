@@ -8,7 +8,7 @@ keywords = ["debug", "line", "graphics", "bevy", "drawing"]
 license = "MIT"
 name = "bevy_prototype_debug_lines"
 repository = "https://github.com/Toqozz/bevy_debug_lines"
-version = "0.10.2"
+version = "0.11.0"
 
 exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 
