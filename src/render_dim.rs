@@ -238,10 +238,7 @@ pub mod r2d {
     impl FromWorld for DebugLinePipeline {
         fn from_world(render_world: &mut World) -> Self {
             DebugLinePipeline {
-                mesh_pipeline: render_world
-                    .get_resource::<Mesh2dPipeline>()
-                    .unwrap()
-                    .clone(),
+                mesh_pipeline: Mesh2dPipeline::from_world(render_world),
                 shader: DEBUG_LINES_SHADER_HANDLE.typed(),
             }
         }

@@ -6,9 +6,9 @@ fn main() {
     App::new()
         .insert_resource(Msaa::default())
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin::default())
-        .add_startup_system(setup)
-        .add_system(move_with_mouse)
+        .add_plugins(DebugLinesPlugin::default())
+        .add_systems(Startup, setup)
+        .add_systems(Update, move_with_mouse)
         .run();
 }
 
