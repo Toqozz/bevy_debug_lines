@@ -49,13 +49,13 @@ pub mod r3d {
         ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
             let mut shader_defs = Vec::new();
             shader_defs.push("LINES_3D".into());
-            shader_defs.push(ShaderDefVal::Int(
+            shader_defs.push(ShaderDefVal::UInt(
                 "MAX_CASCADES_PER_LIGHT".to_string(),
-                MAX_CASCADES_PER_LIGHT as i32,
+                MAX_CASCADES_PER_LIGHT as u32,
             ));
-            shader_defs.push(ShaderDefVal::Int(
+            shader_defs.push(ShaderDefVal::UInt(
                 "MAX_DIRECTIONAL_LIGHTS".to_string(),
-                MAX_DIRECTIONAL_LIGHTS as i32,
+                MAX_DIRECTIONAL_LIGHTS as u32,
             ));
             if depth_test {
                 shader_defs.push("DEPTH_TEST_ENABLED".into());
