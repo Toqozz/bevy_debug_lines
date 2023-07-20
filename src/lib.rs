@@ -9,7 +9,7 @@ use bevy::{
         render_resource::PrimitiveTopology,
         render_resource::Shader,
         view::{NoFrustumCulling, RenderLayers},
-        Extract,
+        Extract, Render,
     },
 };
 use shapes::AddLines;
@@ -188,7 +188,7 @@ impl Plugin for DebugLinesPlugin {
             })
             .init_resource::<SpecializedMeshPipelines<dim::DebugLinePipeline>>()
             .add_systems(ExtractSchedule, extract)
-            .add_systems(Update, dim::queue.in_set(RenderSet::Queue));
+            .add_systems(Render, dim::queue.in_set(RenderSet::Queue));
 
         info!("Loaded {} debug lines plugin.", dim::DIMMENSION);
     }

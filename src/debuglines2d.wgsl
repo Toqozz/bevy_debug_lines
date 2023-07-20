@@ -1,4 +1,4 @@
-#import bevy_sprite::mesh2d_view_bindings
+#import bevy_sprite::mesh2d_view_bindings view
 
 
 struct Vertex {
