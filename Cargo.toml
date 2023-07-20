@@ -8,7 +8,7 @@ keywords = ["debug", "line", "graphics", "bevy", "drawing"]
 license = "MIT"
 name = "bevy_prototype_debug_lines"
 repository = "https://github.com/Toqozz/bevy_debug_lines"
-version = "0.11.0"
+version = "0.11.1"
 
 exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 
@@ -27,6 +27,9 @@ example_deps = [
     "bevy/bevy_winit",
     "bevy/bevy_gltf",
     "bevy/x11",
+    "bevy/tonemapping_luts",
+    "bevy/ktx2",
+    "bevy/zstd",
     "3d",
 ]
 3d = []
