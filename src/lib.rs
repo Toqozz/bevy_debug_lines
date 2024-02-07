@@ -173,13 +173,11 @@ impl Plugin for DebugLinesPlugin {
 
         #[cfg(feature = "3d")]
         {
-            bevy::log::info!("3d");
             load_internal_asset!(app, DEBUG_LINES_SHADER_HANDLE, "debuglines.wgsl", Shader::from_wgsl);
         }
 
         #[cfg(not(feature = "3d"))]
         {
-            bevy::log::info!("2d");
             load_internal_asset!(app, DEBUG_LINES_SHADER_HANDLE, "debuglines2d.wgsl", Shader::from_wgsl);
         }
 
@@ -318,7 +316,6 @@ fn update(
 /// Move the DebugLinesMesh marker Component to the render context.
 fn extract(mut commands: Commands, query: Extract<Query<Entity, With<DebugLinesMesh>>>) {
     for entity in query.iter() {
-        bevy::log::info!("Extracting mesh");
         commands.get_or_spawn(entity).insert(RenderDebugLinesMesh);
     }
 }
