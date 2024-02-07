@@ -2,7 +2,8 @@ pub mod r3d {
     use bevy::{
         core_pipeline::core_3d::Opaque3d,
         pbr::{
-            DrawMesh, MeshPipeline, MeshPipelineKey, MeshUniform, SetMeshBindGroup,
+            MeshPipelineViewLayoutKey, RenderMeshInstances,
+            DrawMesh, MeshPipeline, MeshPipelineKey, SetMeshBindGroup,
             SetMeshViewBindGroup, MAX_CASCADES_PER_LIGHT, MAX_DIRECTIONAL_LIGHTS,
         },
         prelude::*,
@@ -34,7 +35,7 @@ pub mod r3d {
         fn from_world(render_world: &mut World) -> Self {
             DebugLinePipeline {
                 mesh_pipeline: render_world.get_resource::<MeshPipeline>().unwrap().clone(),
-                shader: DEBUG_LINES_SHADER_HANDLE.typed(),
+                shader: DEBUG_LINES_SHADER_HANDLE,
             }
         }
     }
@@ -83,10 +84,10 @@ pub mod r3d {
             ])?;
 
             let bind_group_layout = match key.msaa_samples() {
-                1 => vec![self.mesh_pipeline.view_layout.clone()],
+                1 => vec![self.mesh_pipeline.get_view_layout(MeshPipelineViewLayoutKey::NORMAL_PREPASS).clone()],
                 _ => {
                     shader_defs.push("MULTISAMPLED".into());
-                    vec![self.mesh_pipeline.view_layout_multisampled.clone()]
+                    vec![self.mesh_pipeline.get_view_layout(MeshPipelineViewLayoutKey::MULTISAMPLED).clone()]
                 }
             };
 
@@ -158,7 +159,8 @@ pub mod r3d {
         pipeline_cache: Res<PipelineCache>,
         render_meshes: Res<RenderAssets<Mesh>>,
         msaa: Res<Msaa>,
-        material_meshes: Query<(Entity, &MeshUniform, &Handle<Mesh>), With<RenderDebugLinesMesh>>,
+        render_mesh_instances: Res<RenderMeshInstances>,
+        instance_entities: Query<Entity, With<RenderDebugLinesMesh>>,
         config: Res<DebugLinesConfig>,
         mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
     ) {
@@ -170,25 +172,33 @@ pub mod r3d {
         for (view, mut transparent_phase) in views.iter_mut() {
             let view_matrix = view.transform.compute_matrix();
             let view_row_2 = view_matrix.row(2);
-            for (entity, mesh_uniform, mesh_handle) in material_meshes.iter() {
-                if let Some(mesh) = render_meshes.get(mesh_handle) {
-                    let mesh_key = msaa_key
-                        | MeshPipelineKey::from_primitive_topology(PrimitiveTopology::LineList)
-                        | MeshPipelineKey::from_hdr(view.hdr);
-                    let pipeline = pipelines
-                        .specialize(
-                            &pipeline_cache,
-                            &debug_line_pipeline,
-                            (config.depth_test, mesh_key),
-                            &mesh.layout,
-                        )
-                        .unwrap();
-                    transparent_phase.add(Opaque3d {
-                        entity,
-                        pipeline,
-                        draw_function: draw_custom,
-                        distance: view_row_2.dot(mesh_uniform.transform.col(3)),
-                    });
+            for (entity) in instance_entities.iter() {
+                if let Some(render_mesh_instance) = render_mesh_instances.get(&entity) {
+                    if let Some(mesh) = render_meshes.get(render_mesh_instance.mesh_asset_id) {
+                        let mesh_key = msaa_key
+                            | MeshPipelineKey::from_primitive_topology(PrimitiveTopology::LineList)
+                            | MeshPipelineKey::from_hdr(view.hdr);
+                        let pipeline = pipelines
+                            .specialize(
+                                &pipeline_cache,
+                                &debug_line_pipeline,
+                                (config.depth_test, mesh_key),
+                                &mesh.layout,
+                            )
+                            .unwrap();
+
+                        let transform = render_mesh_instance.transforms.transform.translation.extend(1.0);
+
+
+                        transparent_phase.add(Opaque3d {
+                            entity,
+                            pipeline,
+                            draw_function: draw_custom,
+                            distance: view_row_2.dot(transform),
+                            batch_range: 0..1,
+                            dynamic_offset: None,
+                        });
+                    }
                 }
             }
         }
@@ -222,7 +232,7 @@ pub mod r2d {
             view::{Msaa, VisibleEntities},
         },
         sprite::{
-            DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform,
+            DrawMesh2d, Mesh2dPipeline, Mesh2dPipelineKey, RenderMesh2dInstances,
             SetMesh2dBindGroup, SetMesh2dViewBindGroup,
         },
         utils::FloatOrd,
@@ -239,7 +249,7 @@ pub mod r2d {
         fn from_world(render_world: &mut World) -> Self {
             DebugLinePipeline {
                 mesh_pipeline: Mesh2dPipeline::from_world(render_world),
-                shader: DEBUG_LINES_SHADER_HANDLE.typed(),
+                shader: DEBUG_LINES_SHADER_HANDLE,
             }
         }
     }
@@ -308,7 +318,8 @@ pub mod r2d {
         mut specialized_pipelines: ResMut<SpecializedMeshPipelines<DebugLinePipeline>>,
         render_meshes: Res<RenderAssets<Mesh>>,
         msaa: Res<Msaa>,
-        material_meshes: Query<(&Mesh2dUniform, &Mesh2dHandle), With<RenderDebugLinesMesh>>,
+        render_mesh_instances: Res<RenderMesh2dInstances>,
+        instance_entities: Query<Entity, With<RenderDebugLinesMesh>>,
         mut views: Query<(
             &ExtractedView,
             &VisibleEntities,
@@ -320,12 +331,12 @@ pub mod r2d {
             let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples());
 
             for visible_entity in &visible_entities.entities {
-                if let Ok((_uniform, mesh_handle)) = material_meshes.get(*visible_entity) {
-                    if let Some(mesh) = render_meshes.get(&mesh_handle.0) {
+                if let Some(render_mesh_instance) = render_mesh_instances.get(*&visible_entity) {
+                    if let Some(mesh) = render_meshes.get(render_mesh_instance.mesh_asset_id) {
                         let mesh_key = msaa_key
                             | Mesh2dPipelineKey::from_primitive_topology(
-                                PrimitiveTopology::LineList,
-                            )
+                            PrimitiveTopology::LineList,
+                        )
                             | Mesh2dPipelineKey::from_hdr(view.hdr);
                         let pipeline = specialized_pipelines
                             .specialize(
@@ -340,7 +351,8 @@ pub mod r2d {
                             draw_function: draw_mesh2d,
                             pipeline,
                             sort_key: FloatOrd(f32::INFINITY),
-                            batch_range: None,
+                            batch_range: 0..1,
+                            dynamic_offset: None,
                         });
                     }
                 }

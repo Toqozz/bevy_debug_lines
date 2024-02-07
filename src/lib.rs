@@ -1,17 +1,20 @@
 use bevy::{
-    asset::{Assets, HandleUntyped},
+    asset::Assets,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
-    reflect::TypeUuid,
     render::{
+        Extract,
         mesh::{/*Indices,*/ Mesh, VertexAttributeValues},
+        Render,
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
-        render_resource::Shader,
-        view::{NoFrustumCulling, RenderLayers},
-        Extract, Render,
+        render_resource::Shader, view::{NoFrustumCulling, RenderLayers},
     },
 };
+use bevy::asset::load_internal_asset;
+use bevy::pbr::TransmittedShadowReceiver;
+use bevy::render::batching::NoAutomaticBatching;
+
 use shapes::AddLines;
 
 #[cfg(feature = "shapes")]
@@ -27,41 +30,47 @@ mod render_dim;
 // gates-specific code.
 #[cfg(feature = "3d")]
 mod dim {
-    pub(crate) use crate::render_dim::r3d::{queue, DebugLinePipeline, DrawDebugLines};
-    pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh};
+    pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
+
+    pub(crate) use crate::render_dim::r3d::{DebugLinePipeline, DrawDebugLines, queue};
 
     pub(crate) type MeshHandle = Handle<Mesh>;
+
     pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> {
         from
     }
+
     pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
         from
     }
-    pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
     pub(crate) const DIMMENSION: &str = "3d";
 }
+
 #[cfg(not(feature = "3d"))]
 mod dim {
-    pub(crate) use crate::render_dim::r2d::{queue, DebugLinePipeline, DrawDebugLines};
-    pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
+    pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
+
+    pub(crate) use crate::render_dim::r2d::{DebugLinePipeline, DrawDebugLines, queue};
 
     pub(crate) type MeshHandle = Mesh2dHandle;
+
     pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> {
         &from.0
     }
+
     pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
         Mesh2dHandle(from)
     }
-    pub(crate) const SHADER_FILE: &str = include_str!("debuglines2d.wgsl");
+
     pub(crate) const DIMMENSION: &str = "2d";
 }
 
 // See debuglines.wgsl for explanation on 2 shaders.
 //pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
-pub(crate) const DEBUG_LINES_SHADER_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 17477439189930443325);
+pub(crate) const DEBUG_LINES_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(17477439189930443325);
 
 #[derive(Resource)]
 pub(crate) struct DebugLinesConfig {
@@ -121,6 +130,7 @@ pub struct DebugLinesPlugin {
     depth_test: bool,
     render_layers: Vec<u8>,
 }
+
 impl Default for DebugLinesPlugin {
     fn default() -> Self {
         Self {
@@ -163,11 +173,18 @@ impl DebugLinesPlugin {
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
         use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderSet};
-        let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
-        shaders.set_untracked(
-            DEBUG_LINES_SHADER_HANDLE,
-            Shader::from_wgsl(dim::SHADER_FILE, dim::SHADER_FILE),
-        );
+
+        #[cfg(feature = "3d")]
+        {
+            bevy::log::info!("3d");
+            load_internal_asset!(app, DEBUG_LINES_SHADER_HANDLE, "debuglines.wgsl", Shader::from_wgsl);
+        }
+
+        #[cfg(not(feature = "3d"))]
+        {
+            bevy::log::info!("2d");
+            load_internal_asset!(app, DEBUG_LINES_SHADER_HANDLE, "debuglines2d.wgsl", Shader::from_wgsl);
+        }
 
         app.init_resource::<DebugLines>();
 
@@ -179,6 +196,7 @@ impl Plugin for DebugLinesPlugin {
         });
 
         app.add_systems(Startup, setup)
+            // .add_systems(PostUpdate, (update, inspect_entities).in_set(DebugLinesSet::DrawLines));
             .add_systems(PostUpdate, update.in_set(DebugLinesSet::DrawLines));
 
         app.sub_app_mut(RenderApp)
@@ -231,13 +249,13 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<Debug
         //mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
 
         cmds.spawn((
+            TransformBundle::default(),
+            VisibilityBundle::default(),
             dim::into_handle(meshes.add(mesh)),
-            NotShadowCaster,
             NotShadowReceiver,
-            Transform::default(),
-            GlobalTransform::default(),
-            Visibility::default(),
-            ComputedVisibility::default(),
+            TransmittedShadowReceiver,
+            NotShadowCaster,
+            NoAutomaticBatching,
             DebugLinesMesh(i),
             NoFrustumCulling, // disable frustum culling
             RenderLayers::from_layers(config.render_layers.as_slice()),
@@ -311,6 +329,7 @@ fn update(
 /// Move the DebugLinesMesh marker Component to the render context.
 fn extract(mut commands: Commands, query: Extract<Query<Entity, With<DebugLinesMesh>>>) {
     for entity in query.iter() {
+        bevy::log::info!("Extracting mesh");
         commands.get_or_spawn(entity).insert(RenderDebugLinesMesh);
     }
 }
