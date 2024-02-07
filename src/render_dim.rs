@@ -195,7 +195,7 @@ pub mod r3d {
                             pipeline,
                             draw_function: draw_custom,
                             distance: view_row_2.dot(transform),
-                            batch_range: 0..1,
+                            batch_range: 0..0,
                             dynamic_offset: None,
                         });
                     }
@@ -334,7 +334,7 @@ pub mod r2d {
                             draw_function: draw_mesh2d,
                             pipeline,
                             sort_key: FloatOrd(f32::INFINITY),
-                            batch_range: 0..1,
+                            batch_range: 0..0,
                             dynamic_offset: None,
                         });
                     }
