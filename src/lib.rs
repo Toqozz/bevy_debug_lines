@@ -1,19 +1,17 @@
+use bevy::{asset::load_internal_asset, pbr::TransmittedShadowReceiver, render::batching::NoAutomaticBatching};
 use bevy::{
     asset::Assets,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
     render::{
-        Extract,
         mesh::{/*Indices,*/ Mesh, VertexAttributeValues},
-        Render,
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
-        render_resource::Shader, view::{NoFrustumCulling, RenderLayers},
+        render_resource::Shader,
+        view::{NoFrustumCulling, RenderLayers},
+        Extract, Render,
     },
 };
-use bevy::asset::load_internal_asset;
-use bevy::pbr::TransmittedShadowReceiver;
-use bevy::render::batching::NoAutomaticBatching;
 
 use shapes::AddLines;
 
@@ -30,10 +28,10 @@ mod render_dim;
 // gates-specific code.
 #[cfg(feature = "3d")]
 mod dim {
-    use bevy::{asset::Handle, render::mesh::Mesh};
     pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
+    use bevy::{asset::Handle, render::mesh::Mesh};
 
-    pub(crate) use crate::render_dim::r3d::{DebugLinePipeline, DrawDebugLines, queue};
+    pub(crate) use crate::render_dim::r3d::{queue, DebugLinePipeline, DrawDebugLines};
 
     pub(crate) type MeshHandle = Handle<Mesh>;
 
@@ -49,10 +47,10 @@ mod dim {
 
 #[cfg(not(feature = "3d"))]
 mod dim {
-    use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
     pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
+    use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
 
-    pub(crate) use crate::render_dim::r2d::{DebugLinePipeline, DrawDebugLines, queue};
+    pub(crate) use crate::render_dim::r2d::{queue, DebugLinePipeline, DrawDebugLines};
 
     pub(crate) type MeshHandle = Mesh2dHandle;
 
@@ -69,8 +67,7 @@ mod dim {
 
 // See debuglines.wgsl for explanation on 2 shaders.
 //pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
-pub(crate) const DEBUG_LINES_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(17477439189930443325);
+pub(crate) const DEBUG_LINES_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(17477439189930443325);
 
 #[derive(Resource)]
 pub(crate) struct DebugLinesConfig {
@@ -286,11 +283,7 @@ fn update(
         if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
             vbuffer.clear();
             if lines.enabled {
-                if let Some(new_content) = lines
-                    .positions
-                    .chunks(MAX_POINTS_PER_MESH)
-                    .nth(debug_lines_idx.0)
-                {
+                if let Some(new_content) = lines.positions.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
                     vbuffer.extend(new_content);
                 }
             }
@@ -299,11 +292,7 @@ fn update(
         if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
             cbuffer.clear();
             if lines.enabled {
-                if let Some(new_content) = lines
-                    .colors
-                    .chunks(MAX_POINTS_PER_MESH)
-                    .nth(debug_lines_idx.0)
-                {
+                if let Some(new_content) = lines.colors.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
                     cbuffer.extend(new_content);
                 }
             }
@@ -420,14 +409,7 @@ impl DebugLines {
     ///   zero will show the line for 1 frame.
     /// * `start_color` - Line color
     /// * `end_color` - Line color
-    pub fn line_gradient(
-        &mut self,
-        start: Vec3,
-        end: Vec3,
-        duration: f32,
-        start_color: Color,
-        end_color: Color,
-    ) {
+    pub fn line_gradient(&mut self, start: Vec3, end: Vec3, duration: f32, start_color: Color, end_color: Color) {
         if self.positions.len() >= MAX_POINTS {
             warn!("Tried to add a new line when existing number of lines was already at maximum, ignoring.");
             return;
