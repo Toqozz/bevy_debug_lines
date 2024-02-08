@@ -4,14 +4,17 @@ use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
     render::{
+        Extract,
         mesh::{/*Indices,*/ Mesh, VertexAttributeValues},
+        Render,
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
-        render_resource::Shader,
-        view::{NoFrustumCulling, RenderLayers},
-        Extract, Render,
+        render_resource::Shader, view::{NoFrustumCulling, RenderLayers},
     },
 };
+use bevy::render::mesh::MeshVertexAttribute;
+use bevy::render::render_resource::{ShaderType, VertexFormat};
+use bevy::utils::petgraph::visit::Walker;
 
 use shapes::AddLines;
 
@@ -28,10 +31,10 @@ mod render_dim;
 // gates-specific code.
 #[cfg(feature = "3d")]
 mod dim {
-    pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh};
+    pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
 
-    pub(crate) use crate::render_dim::r3d::{queue, DebugLinePipeline, DrawDebugLines};
+    pub(crate) use crate::render_dim::r3d::{DebugLinePipeline, DrawDebugLines, queue};
 
     pub(crate) type MeshHandle = Handle<Mesh>;
 
@@ -42,15 +45,16 @@ mod dim {
     pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
         from
     }
+
     pub(crate) const DIMMENSION: &str = "3d";
 }
 
 #[cfg(not(feature = "3d"))]
 mod dim {
-    pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
+    pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
 
-    pub(crate) use crate::render_dim::r2d::{queue, DebugLinePipeline, DrawDebugLines};
+    pub(crate) use crate::render_dim::r2d::{DebugLinePipeline, DrawDebugLines, queue};
 
     pub(crate) type MeshHandle = Mesh2dHandle;
 
@@ -227,6 +231,8 @@ pub const MAX_POINTS: usize = MAX_POINTS_PER_MESH * MESH_COUNT;
 /// Maximum number of unique lines to draw at once.
 pub const MAX_LINES: usize = MAX_POINTS / 2;
 
+pub const MESH_PADDING: MeshVertexAttribute = MeshVertexAttribute::new("padding", 2, VertexFormat::Float32);
+
 fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<DebugLinesRenderLayer>) {
     // Spawn a bunch of meshes to use for lines.
     for i in 0..MESH_COUNT {
@@ -240,6 +246,14 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<Debug
             Mesh::ATTRIBUTE_COLOR,
             VertexAttributeValues::Float32x4(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
+
+        // This is needed only to keep padding aligned with 16 bytes in WASM
+        #[cfg(target_arch = "wasm32")]
+        mesh.insert_attribute(
+            MESH_PADDING,
+            VertexAttributeValues::Float32(Vec::with_capacity(MAX_POINTS_PER_MESH)),
+        );
+
         // https://github.com/Toqozz/bevy_debug_lines/issues/16
         //mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
 
@@ -278,20 +292,41 @@ fn update(
     for (mesh_handle, debug_lines_idx) in debug_line_meshes.iter() {
         let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
         use VertexAttributeValues::{Float32x3, Float32x4};
-        if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-            vbuffer.clear();
-            if lines.enabled {
-                if let Some(new_content) = lines.positions.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
-                    vbuffer.extend(new_content);
-                }
+
+        let position_chunk = if lines.enabled {
+            lines.positions.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0)
+        } else {
+            None
+        };
+
+        let color_chunk = if lines.enabled {
+            lines.colors.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0)
+        } else {
+            None
+        };
+
+        if let Some(Float32x3(buffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+            buffer.clear();
+            if let Some(new_content) = position_chunk {
+                buffer.extend(new_content);
             }
         }
 
-        if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
-            cbuffer.clear();
-            if lines.enabled {
-                if let Some(new_content) = lines.colors.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0) {
-                    cbuffer.extend(new_content);
+        if let Some(Float32x4(buffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
+            buffer.clear();
+            if let Some(new_content) = color_chunk {
+                buffer.extend(new_content);
+            }
+        }
+
+        // This is needed only to keep padding aligned with 16 bytes in WASM
+        #[cfg(target_arch = "wasm32")] {
+            use VertexAttributeValues::Float32;
+
+            if let Some(Float32(buffer)) = mesh.attribute_mut(crate::MESH_PADDING) {
+                buffer.clear();
+                if let Some(new_content) = position_chunk {
+                    buffer.extend(&vec![0.0; new_content.len()]);
                 }
             }
         }
