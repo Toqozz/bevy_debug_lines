@@ -13,8 +13,7 @@ use bevy::{
     },
 };
 use bevy::render::mesh::MeshVertexAttribute;
-use bevy::render::render_resource::{ShaderType, VertexFormat};
-use bevy::utils::petgraph::visit::Walker;
+use bevy::render::render_resource::VertexFormat;
 
 use shapes::AddLines;
 

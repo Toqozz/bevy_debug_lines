@@ -1,5 +1,5 @@
 // One shader should be possible, previously bugged so we use 2 shaders: https://github.com/bevyengine/bevy/issues/4011
-#import bevy_pbr::mesh_view_bindings view
+#import bevy_pbr::mesh_view_bindings::view
 
 struct Vertex {
     @location(0) pos: vec3<f32>,
