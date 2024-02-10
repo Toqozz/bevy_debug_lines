@@ -1,17 +1,20 @@
+use bevy::{asset::load_internal_asset, pbr::TransmittedShadowReceiver, render::batching::NoAutomaticBatching};
 use bevy::{
-    asset::{Assets, HandleUntyped},
+    asset::Assets,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
-    reflect::TypeUuid,
     render::{
+        Extract,
         mesh::{/*Indices,*/ Mesh, VertexAttributeValues},
+        Render,
         render_phase::AddRenderCommand,
         render_resource::PrimitiveTopology,
-        render_resource::Shader,
-        view::{NoFrustumCulling, RenderLayers},
-        Extract, Render,
+        render_resource::Shader, view::{NoFrustumCulling, RenderLayers},
     },
 };
+use bevy::render::mesh::MeshVertexAttribute;
+use bevy::render::render_resource::VertexFormat;
+
 use shapes::AddLines;
 
 #[cfg(feature = "shapes")]
@@ -27,41 +30,47 @@ mod render_dim;
 // gates-specific code.
 #[cfg(feature = "3d")]
 mod dim {
-    pub(crate) use crate::render_dim::r3d::{queue, DebugLinePipeline, DrawDebugLines};
-    pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh};
+    pub(crate) use bevy::core_pipeline::core_3d::Opaque3d as Phase;
+
+    pub(crate) use crate::render_dim::r3d::{DebugLinePipeline, DrawDebugLines, queue};
 
     pub(crate) type MeshHandle = Handle<Mesh>;
+
     pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> {
         from
     }
+
     pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
         from
     }
-    pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
+
     pub(crate) const DIMMENSION: &str = "3d";
 }
+
 #[cfg(not(feature = "3d"))]
 mod dim {
-    pub(crate) use crate::render_dim::r2d::{queue, DebugLinePipeline, DrawDebugLines};
-    pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
     use bevy::{asset::Handle, render::mesh::Mesh, sprite::Mesh2dHandle};
+    pub(crate) use bevy::core_pipeline::core_2d::Transparent2d as Phase;
+
+    pub(crate) use crate::render_dim::r2d::{DebugLinePipeline, DrawDebugLines, queue};
 
     pub(crate) type MeshHandle = Mesh2dHandle;
+
     pub(crate) fn from_handle(from: &MeshHandle) -> &Handle<Mesh> {
         &from.0
     }
+
     pub(crate) fn into_handle(from: Handle<Mesh>) -> MeshHandle {
         Mesh2dHandle(from)
     }
-    pub(crate) const SHADER_FILE: &str = include_str!("debuglines2d.wgsl");
+
     pub(crate) const DIMMENSION: &str = "2d";
 }
 
 // See debuglines.wgsl for explanation on 2 shaders.
 //pub(crate) const SHADER_FILE: &str = include_str!("debuglines.wgsl");
-pub(crate) const DEBUG_LINES_SHADER_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 17477439189930443325);
+pub(crate) const DEBUG_LINES_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(17477439189930443325);
 
 #[derive(Resource)]
 pub(crate) struct DebugLinesConfig {
@@ -121,6 +130,7 @@ pub struct DebugLinesPlugin {
     depth_test: bool,
     render_layers: Vec<u8>,
 }
+
 impl Default for DebugLinesPlugin {
     fn default() -> Self {
         Self {
@@ -163,11 +173,16 @@ impl DebugLinesPlugin {
 impl Plugin for DebugLinesPlugin {
     fn build(&self, app: &mut App) {
         use bevy::render::{render_resource::SpecializedMeshPipelines, RenderApp, RenderSet};
-        let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
-        shaders.set_untracked(
-            DEBUG_LINES_SHADER_HANDLE,
-            Shader::from_wgsl(dim::SHADER_FILE, dim::SHADER_FILE),
-        );
+
+        #[cfg(feature = "3d")]
+        {
+            load_internal_asset!(app, DEBUG_LINES_SHADER_HANDLE, "debuglines.wgsl", Shader::from_wgsl);
+        }
+
+        #[cfg(not(feature = "3d"))]
+        {
+            load_internal_asset!(app, DEBUG_LINES_SHADER_HANDLE, "debuglines2d.wgsl", Shader::from_wgsl);
+        }
 
         app.init_resource::<DebugLines>();
 
@@ -179,6 +194,7 @@ impl Plugin for DebugLinesPlugin {
         });
 
         app.add_systems(Startup, setup)
+            // .add_systems(PostUpdate, (update, inspect_entities).in_set(DebugLinesSet::DrawLines));
             .add_systems(PostUpdate, update.in_set(DebugLinesSet::DrawLines));
 
         app.sub_app_mut(RenderApp)
@@ -214,6 +230,8 @@ pub const MAX_POINTS: usize = MAX_POINTS_PER_MESH * MESH_COUNT;
 /// Maximum number of unique lines to draw at once.
 pub const MAX_LINES: usize = MAX_POINTS / 2;
 
+pub const MESH_PADDING: MeshVertexAttribute = MeshVertexAttribute::new("padding", 2, VertexFormat::Float32);
+
 fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<DebugLinesRenderLayer>) {
     // Spawn a bunch of meshes to use for lines.
     for i in 0..MESH_COUNT {
@@ -227,17 +245,25 @@ fn setup(mut cmds: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<Debug
             Mesh::ATTRIBUTE_COLOR,
             VertexAttributeValues::Float32x4(Vec::with_capacity(MAX_POINTS_PER_MESH)),
         );
+
+        // This is needed only to keep padding aligned with 16 bytes in WASM
+        #[cfg(target_arch = "wasm32")]
+        mesh.insert_attribute(
+            MESH_PADDING,
+            VertexAttributeValues::Float32(Vec::with_capacity(MAX_POINTS_PER_MESH)),
+        );
+
         // https://github.com/Toqozz/bevy_debug_lines/issues/16
         //mesh.set_indices(Some(Indices::U16(Vec::with_capacity(MAX_POINTS_PER_MESH))));
 
         cmds.spawn((
+            TransformBundle::default(),
+            VisibilityBundle::default(),
             dim::into_handle(meshes.add(mesh)),
-            NotShadowCaster,
             NotShadowReceiver,
-            Transform::default(),
-            GlobalTransform::default(),
-            Visibility::default(),
-            ComputedVisibility::default(),
+            TransmittedShadowReceiver,
+            NotShadowCaster,
+            NoAutomaticBatching,
             DebugLinesMesh(i),
             NoFrustumCulling, // disable frustum culling
             RenderLayers::from_layers(config.render_layers.as_slice()),
@@ -265,28 +291,41 @@ fn update(
     for (mesh_handle, debug_lines_idx) in debug_line_meshes.iter() {
         let mesh = meshes.get_mut(dim::from_handle(mesh_handle)).unwrap();
         use VertexAttributeValues::{Float32x3, Float32x4};
-        if let Some(Float32x3(vbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
-            vbuffer.clear();
-            if lines.enabled {
-                if let Some(new_content) = lines
-                    .positions
-                    .chunks(MAX_POINTS_PER_MESH)
-                    .nth(debug_lines_idx.0)
-                {
-                    vbuffer.extend(new_content);
-                }
+
+        let position_chunk = if lines.enabled {
+            lines.positions.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0)
+        } else {
+            None
+        };
+
+        let color_chunk = if lines.enabled {
+            lines.colors.chunks(MAX_POINTS_PER_MESH).nth(debug_lines_idx.0)
+        } else {
+            None
+        };
+
+        if let Some(Float32x3(buffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+            buffer.clear();
+            if let Some(new_content) = position_chunk {
+                buffer.extend(new_content);
             }
         }
 
-        if let Some(Float32x4(cbuffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
-            cbuffer.clear();
-            if lines.enabled {
-                if let Some(new_content) = lines
-                    .colors
-                    .chunks(MAX_POINTS_PER_MESH)
-                    .nth(debug_lines_idx.0)
-                {
-                    cbuffer.extend(new_content);
+        if let Some(Float32x4(buffer)) = mesh.attribute_mut(Mesh::ATTRIBUTE_COLOR) {
+            buffer.clear();
+            if let Some(new_content) = color_chunk {
+                buffer.extend(new_content);
+            }
+        }
+
+        // This is needed only to keep padding aligned with 16 bytes in WASM
+        #[cfg(target_arch = "wasm32")] {
+            use VertexAttributeValues::Float32;
+
+            if let Some(Float32(buffer)) = mesh.attribute_mut(crate::MESH_PADDING) {
+                buffer.clear();
+                if let Some(new_content) = position_chunk {
+                    buffer.extend(&vec![0.0; new_content.len()]);
                 }
             }
         }
@@ -401,14 +440,7 @@ impl DebugLines {
     ///   zero will show the line for 1 frame.
     /// * `start_color` - Line color
     /// * `end_color` - Line color
-    pub fn line_gradient(
-        &mut self,
-        start: Vec3,
-        end: Vec3,
-        duration: f32,
-        start_color: Color,
-        end_color: Color,
-    ) {
+    pub fn line_gradient(&mut self, start: Vec3, end: Vec3, duration: f32, start_color: Color, end_color: Color) {
         if self.positions.len() >= MAX_POINTS {
             warn!("Tried to add a new line when existing number of lines was already at maximum, ignoring.");
             return;

@@ -4,11 +4,7 @@ use bevy::prelude::*;
 
 use crate::DebugLines;
 
-pub use self::circle::Circle;
-pub use self::cuboid::Cuboid;
-pub use self::line::Line;
-pub use self::rect::Rect;
-pub use self::sphere::Sphere;
+pub use self::{circle::Circle, cuboid::Cuboid, line::Line, rect::Rect, sphere::Sphere};
 
 mod circle;
 mod cuboid;

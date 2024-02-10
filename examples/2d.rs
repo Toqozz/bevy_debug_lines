@@ -20,11 +20,7 @@ fn setup(mut commands: Commands) {
 }
 
 fn demo(mut lines: ResMut<DebugLines>) {
-    lines.line(
-        Vec3::new(-400.0, 200.0, 0.0),
-        Vec3::new(400.0, 200.0, 0.0),
-        0.0,
-    );
+    lines.line(Vec3::new(-400.0, 200.0, 0.0), Vec3::new(400.0, 200.0, 0.0), 0.0);
     lines.line_colored(
         Vec3::new(-400.0, 0.0, 0.0),
         Vec3::new(400.0, 0.0, 0.0),
