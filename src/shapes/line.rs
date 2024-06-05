@@ -36,13 +36,7 @@ impl From<Line> for Shape {
 
 impl AddLines for Line {
     fn add_lines(&self, lines: &mut crate::DebugLines) {
-        lines.line_gradient(
-            self.start,
-            self.end,
-            self.duration,
-            self.start_color,
-            self.end_color,
-        )
+        lines.line_gradient(self.start, self.end, self.duration, self.start_color, self.end_color)
     }
 }
 
