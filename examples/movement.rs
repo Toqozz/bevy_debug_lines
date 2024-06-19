@@ -20,7 +20,9 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
 
     commands.spawn((
         PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Cube { size: 0.1 })),
+            mesh: meshes.add(Mesh::from(Cuboid {
+                half_size: Vec3::new(0.05, 0.05, 0.05),
+            })),
             material: materials.add(StandardMaterial {
                 base_color: Color::RED,
                 ..Default::default()

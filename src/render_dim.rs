@@ -155,7 +155,7 @@ pub mod r3d {
         }
     }
 
-    #[allow(unused)]
+    #[allow(unused, clippy::complexity)]
     pub(crate) fn queue(
         opaque_3d_draw_functions: Res<DrawFunctions<Transparent3d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
@@ -304,7 +304,7 @@ pub mod r2d {
         }
     }
 
-    #[allow(unused)]
+    #[allow(unused, clippy::complexity)]
     pub(crate) fn queue(
         draw2d_functions: Res<DrawFunctions<Transparent2d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
@@ -321,7 +321,7 @@ pub mod r2d {
             let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples());
 
             for visible_entity in &visible_entities.entities {
-                if let Some(render_mesh_instance) = render_mesh_instances.get(*&visible_entity) {
+                if let Some(render_mesh_instance) = render_mesh_instances.get(visible_entity) {
                     if let Some(mesh) = render_meshes.get(render_mesh_instance.mesh_asset_id) {
                         let mesh_key = msaa_key
                             | Mesh2dPipelineKey::from_primitive_topology(PrimitiveTopology::LineList)
