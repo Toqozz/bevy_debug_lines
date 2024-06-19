@@ -8,12 +8,12 @@ keywords = ["debug", "line", "graphics", "bevy", "drawing"]
 license = "MIT"
 name = "bevy_prototype_debug_lines"
 repository = "https://github.com/Toqozz/bevy_debug_lines"
-version = "0.12.0"
+version = "0.13.0"
 
 exclude = ["demo.gif", "demo_2.png", "demo_2.webm"]
 
 [dependencies]
-bevy = { version = "0.12", default-features = false, features = [ "bevy_core_pipeline", "bevy_render", "bevy_pbr", "bevy_sprite", "bevy_asset" ] }
+bevy = { version = "0.13", default-features = false, features = [ "bevy_core_pipeline", "bevy_render", "bevy_pbr", "bevy_sprite", "bevy_asset" ] }
 
 [features]
 default = ["shapes"]

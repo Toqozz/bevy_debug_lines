@@ -27,7 +27,7 @@ fn setup(mut commands: Commands, mut lines: ResMut<DebugLines>) {
     );
 }
 
-fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>, keyboard_input: Res<Input<KeyCode>>) {
+fn demo(time: Res<Time>, mut lines: ResMut<DebugLines>, keyboard_input: Res<ButtonInput<KeyCode>>) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         info!("Toggled Rendering.");
         lines.enabled = !lines.enabled;

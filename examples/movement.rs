@@ -20,7 +20,9 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
 
     commands.spawn((
         PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Cube { size: 0.1 })),
+            mesh: meshes.add(Mesh::from(Cuboid {
+                half_size: Vec3::new(0.05, 0.05, 0.05),
+            })),
             material: materials.add(StandardMaterial {
                 base_color: Color::RED,
                 ..Default::default()
@@ -40,14 +42,14 @@ fn move_with_mouse(
     mut query: Query<&mut Transform, With<MoveWithMouse>>,
 ) {
     let mut delta = Vec2::ZERO;
-    for event in mouse_motion.iter() {
+    for event in mouse_motion.read() {
         delta += event.delta;
     }
 
     for mut transform in query.iter_mut() {
         let movement = Vec3::new(delta.x, -delta.y, 0.0) * 0.01;
         transform.translation += movement;
-        let forward = transform.local_z();
+        let forward = *transform.local_z();
         lines.line_colored(
             transform.translation,
             transform.translation + forward,

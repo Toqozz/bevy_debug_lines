@@ -1,6 +1,6 @@
 pub mod r3d {
     use bevy::{
-        core_pipeline::core_3d::Opaque3d,
+        core_pipeline::core_3d::Transparent3d,
         pbr::{
             DrawMesh, MeshPipeline, MeshPipelineKey, MeshPipelineViewLayoutKey, RenderMeshInstances, SetMeshBindGroup,
             SetMeshViewBindGroup, MAX_CASCADES_PER_LIGHT, MAX_DIRECTIONAL_LIGHTS,
@@ -155,9 +155,9 @@ pub mod r3d {
         }
     }
 
-    #[allow(unused)]
+    #[allow(unused, clippy::complexity)]
     pub(crate) fn queue(
-        opaque_3d_draw_functions: Res<DrawFunctions<Opaque3d>>,
+        opaque_3d_draw_functions: Res<DrawFunctions<Transparent3d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
         mut pipelines: ResMut<SpecializedMeshPipelines<DebugLinePipeline>>,
         pipeline_cache: Res<PipelineCache>,
@@ -166,7 +166,7 @@ pub mod r3d {
         render_mesh_instances: Res<RenderMeshInstances>,
         instance_entities: Query<Entity, With<RenderDebugLinesMesh>>,
         config: Res<DebugLinesConfig>,
-        mut views: Query<(&ExtractedView, &mut RenderPhase<Opaque3d>)>,
+        mut views: Query<(&ExtractedView, &mut RenderPhase<Transparent3d>)>,
     ) {
         let draw_custom = opaque_3d_draw_functions.read().get_id::<DrawDebugLines>().unwrap();
         let msaa_key = MeshPipelineKey::from_msaa_samples(msaa.samples());
@@ -190,7 +190,7 @@ pub mod r3d {
 
                         let transform = render_mesh_instance.transforms.transform.translation.extend(1.0);
 
-                        transparent_phase.add(Opaque3d {
+                        transparent_phase.add(Transparent3d {
                             entity,
                             pipeline,
                             draw_function: draw_custom,
@@ -304,7 +304,7 @@ pub mod r2d {
         }
     }
 
-    #[allow(unused)]
+    #[allow(unused, clippy::complexity)]
     pub(crate) fn queue(
         draw2d_functions: Res<DrawFunctions<Transparent2d>>,
         debug_line_pipeline: Res<DebugLinePipeline>,
@@ -321,7 +321,7 @@ pub mod r2d {
             let msaa_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples());
 
             for visible_entity in &visible_entities.entities {
-                if let Some(render_mesh_instance) = render_mesh_instances.get(*&visible_entity) {
+                if let Some(render_mesh_instance) = render_mesh_instances.get(visible_entity) {
                     if let Some(mesh) = render_meshes.get(render_mesh_instance.mesh_asset_id) {
                         let mesh_key = msaa_key
                             | Mesh2dPipelineKey::from_primitive_topology(PrimitiveTopology::LineList)
